@@ -47,7 +47,7 @@ export class MatchmakingService {
     
     // Kuyrukta en az 1 gerçek oyuncu var mı? (Tüm kuyruğu çekmiyoruz, var mı bakıyoruz)
     // Şimdilik dequeue diyip var olanları çekelim
-    const currentPlayers = await this.redisService.dequeuePlayers(queueName, requiredPlayers);
+    const currentPlayers = await this.redisService.dequeuePlayers(queueName, requiredPlayers, false);
     
     if (currentPlayers.length === 0) return; // Kuyrukta kimse yoksa veya iptal etmişse dön
 

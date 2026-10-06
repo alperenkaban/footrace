@@ -36,23 +36,18 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
-  async dequeuePlayers(queueName: string, count: number): Promise<string[]> {
-    // Aynı anda birden fazla oyuncuyu kuyruktan güvenle almak için transaction/Lua kullanılabilir.
-    // MVP aşamasında temel pop işlemi yapıyoruz.
+  async dequeuePlayers(queueName: string, count: number, exact: boolean = true): Promise<string[]> {
     const players: string[] = [];
     for (let i = 0; i < count; i++) {
       const player = await this.redisClient.lpop(queueName);
       if (player) {
         players.push(player);
       } else {
-        break; // Kuyrukta yeterli oyuncu yoksa işlemi kes
+        break;
       }
     }
     
-    // Eğer istenen sayıya ulaşılamadıysa (örn 2 kişi lazımdı 1 kişi çıktı)
-    // O 1 kişiyi tekrar kuyruğun en başına koymalıyız.
-    if (players.length > 0 && players.length < count) {
-      // Reverse edip lpush ile geri koyuyoruz
+    if (exact && players.length > 0 && players.length < count) {
       for (const p of players.reverse()) {
         await this.redisClient.lpush(queueName, p);
       }
