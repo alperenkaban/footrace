@@ -33,7 +33,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   guestLogin: async (displayName?: string) => {
     set({ isLoading: true });
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://footrace-6lnc.onrender.com';
       const res = await fetch(`${API_URL}/auth/guest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../store/useAuthStore';
 
-const URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const URL = process.env.NEXT_PUBLIC_API_URL || 'https://footrace-6lnc.onrender.com';
 
 let socket: Socket | null = null;
 
