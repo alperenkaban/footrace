@@ -33,7 +33,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   guestLogin: async (displayName?: string) => {
     set({ isLoading: true });
     try {
-      const res = await fetch('http://localhost:4000/auth/guest', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const res = await fetch(`${API_URL}/auth/guest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ displayName }),
