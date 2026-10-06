@@ -2,8 +2,7 @@
 
 import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'next/useState';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function LoginPage() {
   const { guestLogin, isAuthenticated, initialized } = useAuthStore();
