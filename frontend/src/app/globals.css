@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-500: #10b981; /* Emerald */
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-dark-bg: #0b0f19;
+  --color-dark-surface: #1e293b;
+  --color-dark-surface-hover: #334155;
+  --color-correct: #10b981;
+  --color-wrong: #ef4444;
+}
+
+:root {
+  --background: #0b0f19;
+  --foreground: #f8fafc;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(160, 100%, 20%, 0.2) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(220, 100%, 20%, 0.2) 0px, transparent 50%);
+  background-attachment: fixed;
+}
+
+/* Custom Utilities for Glassmorphism & Animations */
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10 shadow-xl rounded-2xl;
+  }
+  
+  .glass-button {
+    @apply relative overflow-hidden bg-white/10 hover:bg-white/20 border border-white/20 transition-all duration-300 rounded-xl font-medium;
+  }
+  
+  .glass-button-brand {
+    @apply relative overflow-hidden bg-emerald-600/80 hover:bg-emerald-500 border border-emerald-400/50 shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] transition-all duration-300 rounded-xl font-bold;
+  }
+  
+  .animate-pulse-fast {
+    animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}

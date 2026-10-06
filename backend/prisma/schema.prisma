@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String?  @unique
+  passwordHash String?
+  
+  googleId     String?  @unique
+  facebookId   String?  @unique
+  isGuest      Boolean  @default(true)
+  isBot        Boolean  @default(false)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile          PlayerProfile?
+  coinTransactions CoinTransaction[]
+  matchPlayers     MatchPlayer[]
+}
+
+model PlayerProfile {
+  id         String @id @default(uuid())
+  userId     String @unique
+  user       User   @relation(fields: [userId], references: [id])
+  
+  rating     Int    @default(1000)
+  balance    Int    @default(0) // Available Coin balance
+  heldBalance Int   @default(0) // Reserved for match entry fees
+  totalGames Int    @default(0)
+  wins       Int    @default(0)
+  losses     Int    @default(0)
+
+  updatedAt  DateTime @updatedAt
+}
+
+model CoinTransaction {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  amount        Int      // Pozitif veya negatif olabilir
+  type          String   // GAME_REWARD, DAILY_REWARD, SHOP_PURCHASE vs.
+  referenceId   String   // Idempotency için, örn: matchId
+  balanceBefore Int
+  balanceAfter  Int
+  createdAt     DateTime @default(now())
+
+  // Aynı maça 2 kez ödül verilmesini engeller (Anti-cheat & Double Reward)
+  @@unique([type, referenceId])
+}
+
+model GameMode {
+  id               String   @id @default(uuid())
+  name             String   @unique // QUICK_2, CLASSIC_4, RANKED_4 vb.
+  maxPlayers       Int
+  questionCount    Int
+  questionDuration Int      // Saniye cinsinden standart soru süresi
+  entryFee         Int      @default(0) // Giriş ücreti (Coin)
+  rewardMultiplier Float    @default(1.0)
+  ratingEnabled    Boolean  @default(false)
+  isActive         Boolean  @default(true)
+
+  matches Match[]
+}
+
+enum QuestionType {
+  ESTIMATION
+  MULTIPLE_CHOICE
+  RANKING
+  PLAYER_GUESS
+  HARD_QUESTION
+  FINAL
+}
+
+model Question {
+  id          String            @id @default(uuid())
+  code        String            @unique // İnsan okuyabilir bir kod, örn: "messi_total_goals"
+  type        QuestionType
+  createdAt   DateTime          @default(now())
+  
+  versions    QuestionVersion[]
+}
+
+model QuestionVersion {
+  id            String   @id @default(uuid())
+  questionId    String
+  question      Question @relation(fields: [questionId], references: [id])
+  
+  versionNumber Int
+  text          String
+  metadata      Json     // Soru tiplerine özel datalar (Şıklar vb.) Backend DTO'ları ile validate edilecek.
+  correctAnswer Json     // Doğru cevap datası
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  matchQuestions MatchQuestion[]
+
+  @@unique([questionId, versionNumber])
+}
+
+model Match {
+  id         String   @id @default(uuid())
+  gameModeId String
+  gameMode   GameMode @relation(fields: [gameModeId], references: [id])
+  
+  status     String   // CREATED, ACTIVE, COMPLETED, ABORTED, SETTLED
+  createdAt  DateTime @default(now())
+  endedAt    DateTime?
+  settledAt  DateTime? // Idempotency: Ensures a match is settled only once
+
+  players    MatchPlayer[]
+  questions  MatchQuestion[]
+}
+
+model MatchPlayer {
+  id         String  @id @default(uuid())
+  matchId    String
+  match      Match   @relation(fields: [matchId], references: [id])
+  userId     String
+  user       User    @relation(fields: [userId], references: [id])
+  
+  finalScore Int     @default(0)
+  isWinner   Boolean @default(false)
+
+  answers    Answer[]
+
+  @@unique([matchId, userId])
+}
+
+model MatchQuestion {
+  id                String          @id @default(uuid())
+  matchId           String
+  match             Match           @relation(fields: [matchId], references: [id])
+  questionVersionId String
+  questionVersion   QuestionVersion @relation(fields: [questionVersionId], references: [id])
+  
+  orderIndex        Int
+  
+  // Anti-cheat ve Server-authoritative timing için gerçek başlama/bitiş zamanları
+  startedAt         DateTime?
+  endedAt           DateTime?
+
+  answers           Answer[]
+
+  @@unique([matchId, orderIndex])
+}
+
+model Answer {
+  id              String        @id @default(uuid())
+  matchQuestionId String
+  matchQuestion   MatchQuestion @relation(fields: [matchQuestionId], references: [id])
+  matchPlayerId   String
+  matchPlayer     MatchPlayer   @relation(fields: [matchPlayerId], references: [id])
+  
+  givenAnswer     Json          // Oyuncunun verdiği cevap
+  scoreAwarded    Int           // Bu sorudan kazanılan puan
+  responseTimeMs  Int           // Ne kadar sürede cevap verdi (Puan çarpanı için)
+  submittedAt     DateTime      @default(now())
+
+  // Bir oyuncu bir soruya sadece bir kez cevap verebilir
+  @@unique([matchQuestionId, matchPlayerId])
+}
