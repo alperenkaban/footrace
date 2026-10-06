@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { getSocket } from "@/lib/socket";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 export default function GamePage() {
   const { user, initialized, isAuthenticated } = useAuthStore();
   const router = useRouter();
+  const params = useParams();
+  const roomId = params.roomId as string;
   
   const [gameState, setGameState] = useState<"PLAYING" | "FINISHED">("PLAYING");
   const [question, setQuestion] = useState<any>(null);
@@ -34,6 +36,11 @@ export default function GamePage() {
     if (!socket) {
       router.replace('/lobby');
       return;
+    }
+
+    // Join the socket room so we receive server.to(roomId) events
+    if (roomId) {
+      socket.emit('join_room', { roomId });
     }
 
     socket.on("question_started", (data) => {
