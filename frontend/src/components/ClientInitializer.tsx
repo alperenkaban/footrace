@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { usePathname, useRouter } from 'next/navigation';
+import { SocketProvider } from '@/providers/SocketProvider';
 
 export default function ClientInitializer({ children }: { children: React.ReactNode }) {
   const { initializeAuth, initialized, isAuthenticated } = useAuthStore();
@@ -34,5 +35,5 @@ export default function ClientInitializer({ children }: { children: React.ReactN
     return <div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">Yükleniyor...</div>;
   }
 
-  return <>{children}</>;
+  return <SocketProvider>{children}</SocketProvider>;
 }

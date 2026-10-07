@@ -3,14 +3,14 @@
 import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { connectSocket, disconnectSocket, getSocket } from '@/lib/socket';
+import { useSocket } from '@/providers/SocketProvider';
 import { Coins, Trophy, LogOut, Loader2, Zap } from 'lucide-react';
 
 export default function LobbyPage() {
-  const { user, accessToken, isAuthenticated, initialized, logout } = useAuthStore();
+  const { user, isAuthenticated, initialized, logout } = useAuthStore();
   const router = useRouter();
+  const { socket, socketState } = useSocket();
   
-  const [socketState, setSocketState] = useState<'CONNECTING' | 'CONNECTED' | 'DISCONNECTED' | 'AUTH_ERROR'>('CONNECTING');
   const [matchStatus, setMatchStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -18,64 +18,69 @@ export default function LobbyPage() {
       router.replace('/login');
       return;
     }
+  }, [initialized, isAuthenticated, router]);
 
-    if (isAuthenticated && accessToken) {
-      const socket = connectSocket(accessToken);
-      
-      socket.on('connect', () => setSocketState('CONNECTED'));
-      socket.on('disconnect', () => setSocketState('DISCONNECTED'));
-      socket.on('connect_error', () => setSocketState('AUTH_ERROR'));
-      
-      socket.on('wallet_updated', (data) => {
-        useAuthStore.getState().updateWallet(data.balance, data.heldBalance);
-      });
+  // Socket event listeners
+  useEffect(() => {
+    if (!socket) return;
 
-      socket.on('error', (err) => {
-        if (err.code === 'INSUFFICIENT_FUNDS') {
-          alert('Bakiye yetersiz! Maça giriş için 100 Coin gereklidir.');
-          setMatchStatus(null); // Aranıyor yazısını kaldır
-        } else {
-          console.error(err);
-        }
-      });
-      
-      socket.on('matchmaking_status', (data) => {
-        if (data.status === 'searching') {
-          setMatchStatus('Rakip aranıyor...');
-        } else {
-          setMatchStatus(null);
-        }
-      });
-      
-      socket.on('match_found', (data) => {
-        setMatchStatus('Rakip bulundu!');
-        setTimeout(() => {
-          router.push(`/game/${data.roomId}`);
-        }, 1500);
-      });
+    console.log('[LOBBY] Setting up socket listeners. Socket connected:', socket.connected);
 
-      return () => {
-        socket.off('connect');
-        socket.off('disconnect');
-        socket.off('connect_error');
-        socket.off('wallet_updated');
-        socket.off('error');
-        socket.off('matchmaking_status');
-        socket.off('match_found');
-        disconnectSocket();
-      };
-    }
-  }, [initialized, isAuthenticated, accessToken, router]);
+    const onWalletUpdated = (data: any) => {
+      console.log('[LOBBY] wallet_updated:', data);
+      useAuthStore.getState().updateWallet(data.balance, data.heldBalance);
+    };
+
+    const onError = (err: any) => {
+      console.error('[LOBBY] Socket error:', err);
+      if (err.code === 'INSUFFICIENT_FUNDS') {
+        alert('Bakiye yetersiz! Maça giriş için 100 Coin gereklidir.');
+      } else {
+        alert(`Sunucu Hatası: ${err.message || err.code || JSON.stringify(err)}`);
+      }
+      setMatchStatus(null);
+    };
+
+    const onMatchmakingStatus = (data: any) => {
+      console.log('[LOBBY] matchmaking_status:', data);
+      if (data.status === 'searching') {
+        setMatchStatus('Rakip aranıyor...');
+      } else {
+        setMatchStatus(null);
+      }
+    };
+
+    const onMatchFound = (data: any) => {
+      console.log('[LOBBY] match_found:', data);
+      setMatchStatus('Rakip bulundu!');
+      // Navigate immediately, no delay
+      router.push(`/game/${data.roomId}`);
+    };
+
+    socket.on('wallet_updated', onWalletUpdated);
+    socket.on('error', onError);
+    socket.on('matchmaking_status', onMatchmakingStatus);
+    socket.on('match_found', onMatchFound);
+
+    return () => {
+      socket.off('wallet_updated', onWalletUpdated);
+      socket.off('error', onError);
+      socket.off('matchmaking_status', onMatchmakingStatus);
+      socket.off('match_found', onMatchFound);
+    };
+  }, [socket, router]);
 
   const handleLogout = () => {
-    disconnectSocket();
     logout();
   };
 
   const handleQuickJoin = () => {
-    const socket = getSocket();
-    if (socket && socketState === 'CONNECTED') {
+    console.log('[LOBBY] handleQuickJoin clicked. Socket:', socket ? 'exists' : 'null', 'connected:', socket?.connected, 'socketState:', socketState);
+    if (socket && socket.connected) {
+      console.log('[LOBBY] Emitting join_matchmaking');
       socket.emit('join_matchmaking', { gameModeId: 'quick_2' });
+    } else {
+      alert(`Socket bağlı değil! Durum: ${socketState}. Sayfayı yenileyin.`);
     }
   };
 
@@ -156,12 +161,14 @@ export default function LobbyPage() {
           <span className="text-lg tracking-wide">Liderlik Tablosu</span>
         </button>
         
-        
         {socketState === 'CONNECTING' && (
           <p className="text-center text-xs text-gray-500">Sunucuya bağlanılıyor...</p>
         )}
         {socketState === 'AUTH_ERROR' && (
           <p className="text-center text-xs text-red-400">Bağlantı reddedildi. Yeniden giriş yapın.</p>
+        )}
+        {socketState === 'DISCONNECTED' && (
+          <p className="text-center text-xs text-yellow-400">Sunucu bağlantısı bekleniyor...</p>
         )}
       </div>
     </div>

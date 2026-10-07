@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from "react";
-import { getSocket } from "@/lib/socket";
+import { useSocket } from "@/providers/SocketProvider";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter, useParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -11,8 +11,9 @@ export default function GamePage() {
   const router = useRouter();
   const params = useParams();
   const roomId = params.roomId as string;
+  const { socket } = useSocket();
   
-  const [gameState, setGameState] = useState<"PLAYING" | "FINISHED">("PLAYING");
+  const [gameState, setGameState] = useState<"WAITING" | "PLAYING" | "FINISHED">("WAITING");
   const [question, setQuestion] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [result, setResult] = useState<any>(null);
@@ -26,24 +27,30 @@ export default function GamePage() {
   const [rankingPool, setRankingPool] = useState<string[]>([]);
   const [rankingAnswer, setRankingAnswer] = useState<string[]>([]);
 
+  // Join room and setup listeners
   useEffect(() => {
+    console.log('[GAME PAGE] useEffect running. roomId:', roomId, 'socket:', socket ? 'exists' : 'null', 'connected:', socket?.connected);
+    
     if (initialized && !isAuthenticated) {
+      console.log('[GAME PAGE] Not authenticated, redirecting to login');
       router.replace('/login');
       return;
     }
 
-    const socket = getSocket();
     if (!socket) {
-      router.replace('/lobby');
-      return;
+      console.log('[GAME PAGE] No socket yet, waiting...');
+      return; // Don't redirect! Just wait for socket to be ready.
     }
 
     // Join the socket room so we receive server.to(roomId) events
     if (roomId) {
+      console.log('[GAME PAGE] Emitting join_room for:', roomId);
       socket.emit('join_room', { roomId });
     }
 
-    socket.on("question_started", (data) => {
+    const onQuestionStarted = (data: any) => {
+      console.log('[GAME PAGE] question_started received:', data);
+      setGameState("PLAYING");
       setQuestion(data.question || data);
       setResult(null); 
       setEstimationAnswer('');
@@ -61,10 +68,10 @@ export default function GamePage() {
       }, 1000);
       
       return () => clearInterval(timer);
-    });
+    };
 
-    socket.on("score_updated", (data) => {
-      // data.leaderboard = [{ userId, totalScore }]
+    const onScoreUpdated = (data: any) => {
+      console.log('[GAME PAGE] score_updated:', data);
       if (data.leaderboard) {
          const newScores: Record<string, number> = {};
          data.leaderboard.forEach((p: any) => {
@@ -72,9 +79,10 @@ export default function GamePage() {
          });
          setScores(newScores);
       }
-    });
+    };
 
-    socket.on("question_ended", (data) => {
+    const onQuestionEnded = (data: any) => {
+      console.log('[GAME PAGE] question_ended:', data);
       setQuestion((prev: any) => ({ ...prev, correctAnswer: data.correctAnswer }));
       if (user && data.playerResults) {
         const myResult = data.playerResults.find((p: any) => p.userId === user.id);
@@ -82,40 +90,47 @@ export default function GamePage() {
           setResult(myResult);
         }
       }
-    });
+    };
 
-    socket.on("game_finished", (data) => {
+    const onGameFinished = (data: any) => {
+      console.log('[GAME PAGE] game_finished:', data);
       setWinner(data.winnerId);
       setGameState("FINISHED");
-    });
+    };
 
-    socket.on('wallet_updated', (data) => {
+    const onWalletUpdated = (data: any) => {
       useAuthStore.getState().updateWallet(data.balance, data.heldBalance);
-    });
+    };
 
-    socket.on("error", (err) => {
-      alert(`Hata: ${err.message}`);
-    });
+    const onError = (err: any) => {
+      console.error('[GAME PAGE] Error:', err);
+      alert(`Hata: ${err.message || JSON.stringify(err)}`);
+    };
+
+    socket.on("question_started", onQuestionStarted);
+    socket.on("score_updated", onScoreUpdated);
+    socket.on("question_ended", onQuestionEnded);
+    socket.on("game_finished", onGameFinished);
+    socket.on("wallet_updated", onWalletUpdated);
+    socket.on("error", onError);
 
     return () => {
-      socket.off("question_started");
-      socket.off("score_updated");
-      socket.off("question_ended");
-      socket.off("game_finished");
-      socket.off("wallet_updated");
-      socket.off("error");
+      socket.off("question_started", onQuestionStarted);
+      socket.off("score_updated", onScoreUpdated);
+      socket.off("question_ended", onQuestionEnded);
+      socket.off("game_finished", onGameFinished);
+      socket.off("wallet_updated", onWalletUpdated);
+      socket.off("error", onError);
     };
-  }, [initialized, isAuthenticated, user, router]);
+  }, [initialized, isAuthenticated, user, router, socket, roomId]);
 
   const submitAnswer = (answer: any) => {
-    if (!question || !user) return;
-    const socket = getSocket();
-    if (socket) {
-      socket.emit("submit_answer", {
-        questionIndex: question.questionIndex ?? question.index,
-        answer: answer,
-      });
-    }
+    if (!question || !user || !socket) return;
+    console.log('[GAME PAGE] Submitting answer:', answer);
+    socket.emit("submit_answer", {
+      questionIndex: question.questionIndex ?? question.index,
+      answer: answer,
+    });
   };
 
   const handleRankingSelect = (item: string) => {
@@ -148,11 +163,11 @@ export default function GamePage() {
               }
             }
             return (
-              <button 
+              <button
                 key={option}
-                onClick={() => submitAnswer(option)}
-                disabled={!!question.correctAnswer}
-                className={`py-4 px-6 rounded-2xl font-bold transition-all text-lg ${btnColor} disabled:opacity-90 disabled:cursor-not-allowed active:scale-[0.98]`}
+                onClick={() => !isAnswered && submitAnswer(option)}
+                disabled={isAnswered}
+                className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all ${btnColor}`}
               >
                 {option}
               </button>
@@ -164,28 +179,24 @@ export default function GamePage() {
 
     if (question.type === 'ESTIMATION') {
       return (
-        <div className="flex flex-col gap-4 mt-6">
-          <input 
+        <div className="flex flex-col items-center gap-4 mt-6">
+          <input
             type="number"
             value={estimationAnswer}
             onChange={(e) => setEstimationAnswer(e.target.value)}
-            disabled={!!question.correctAnswer}
-            placeholder="Tahmininizi girin..."
-            className="w-full bg-white/5 border border-white/20 rounded-2xl p-4 text-center text-2xl font-bold text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+            placeholder="Tahmininizi yazın..."
+            disabled={isAnswered}
+            className="w-full max-w-xs bg-white/10 border border-white/20 rounded-xl py-3 px-4 text-white text-center text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
-          <button 
+          <button
             onClick={() => submitAnswer(Number(estimationAnswer))}
-            disabled={!!question.correctAnswer || estimationAnswer === ''}
-            className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-gray-700 text-white font-bold py-4 rounded-2xl transition-all active:scale-[0.98]"
+            disabled={isAnswered || !estimationAnswer}
+            className="w-full max-w-xs py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors disabled:opacity-50"
           >
             Gönder
           </button>
-
           {question.correctAnswer && (
-            <div className="mt-4 p-4 bg-emerald-500/20 border border-emerald-500/50 rounded-2xl text-center">
-              <span className="text-gray-400 text-sm block mb-1">Doğru Cevap</span>
-              <span className="text-2xl font-bold text-emerald-400">{question.correctAnswer}</span>
-            </div>
+            <p className="text-emerald-400 font-bold text-lg">Doğru Cevap: {question.correctAnswer}</p>
           )}
         </div>
       );
@@ -193,58 +204,37 @@ export default function GamePage() {
 
     if (question.type === 'RANKING') {
       return (
-        <div className="flex flex-col gap-6 mt-6">
-          
-          <div className="flex flex-col gap-2">
-            <span className="text-sm font-bold text-gray-400 uppercase tracking-wider">Sıralamanız (Önce 1. gelsin)</span>
-            <div className="min-h-[100px] border border-dashed border-white/20 rounded-2xl p-4 flex flex-col gap-2 bg-black/20">
-              {rankingAnswer.map((item, idx) => (
-                <button
-                  key={item}
-                  onClick={() => handleRankingDeselect(item)}
-                  disabled={!!question.correctAnswer}
-                  className="w-full py-3 px-4 bg-emerald-500/20 border border-emerald-500/50 rounded-xl text-white font-bold flex gap-4 disabled:opacity-80"
-                >
-                  <span className="text-emerald-400">{idx + 1}.</span> {item}
-                </button>
-              ))}
-              {rankingAnswer.length === 0 && (
-                <span className="text-gray-500 text-center m-auto">Seçenekleri buraya ekleyin</span>
-              )}
-            </div>
+        <div className="mt-6">
+          <p className="text-gray-400 text-sm mb-2">Sıralamak için seçin:</p>
+          <div className="flex flex-col gap-2 mb-4">
+            {rankingAnswer.map((item, idx) => (
+              <button
+                key={item}
+                onClick={() => !isAnswered && handleRankingDeselect(item)}
+                className="py-2 px-4 bg-emerald-500/20 border border-emerald-500/50 rounded-lg text-white text-left"
+              >
+                {idx + 1}. {item}
+              </button>
+            ))}
           </div>
-
           <div className="flex flex-col gap-2">
-            <span className="text-sm font-bold text-gray-400 uppercase tracking-wider">Seçenekler</span>
-            <div className="flex flex-wrap gap-2">
-              {rankingPool.map((item) => (
-                <button
-                  key={item}
-                  onClick={() => handleRankingSelect(item)}
-                  disabled={!!question.correctAnswer}
-                  className="py-3 px-6 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-bold transition-all"
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
+            {rankingPool.map((item) => (
+              <button
+                key={item}
+                onClick={() => !isAnswered && handleRankingSelect(item)}
+                className="py-2 px-4 bg-white/5 border border-white/10 rounded-lg text-gray-300 text-left hover:bg-white/10"
+              >
+                {item}
+              </button>
+            ))}
           </div>
-
-          <button 
-            onClick={() => submitAnswer(rankingAnswer)}
-            disabled={!!question.correctAnswer || rankingPool.length > 0}
-            className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-gray-700 text-white font-bold py-4 rounded-2xl transition-all active:scale-[0.98]"
-          >
-            Sıralamayı Gönder
-          </button>
-
-          {question.correctAnswer && (
-             <div className="mt-4 p-4 bg-emerald-500/20 border border-emerald-500/50 rounded-2xl text-center flex flex-col gap-2">
-               <span className="text-gray-400 text-sm block">Doğru Sıralama</span>
-               {question.correctAnswer.map((item: string, idx: number) => (
-                 <div key={item} className="text-emerald-400 font-bold">{idx + 1}. {item}</div>
-               ))}
-             </div>
+          {rankingPool.length === 0 && rankingAnswer.length > 0 && !isAnswered && (
+            <button
+              onClick={() => submitAnswer(rankingAnswer)}
+              className="w-full mt-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl"
+            >
+              Sıralamayı Gönder
+            </button>
           )}
         </div>
       );
@@ -253,74 +243,86 @@ export default function GamePage() {
     return null;
   };
 
-  return (
-    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4 font-[family-name:var(--font-geist-sans)]">
-      <div className="w-full max-w-xl flex flex-col gap-8 items-center">
+  // GAME FINISHED SCREEN
+  if (gameState === "FINISHED") {
+    const isWinner = winner === user?.id;
+    return (
+      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-6">
+        <div className="text-6xl mb-4">{isWinner ? '🏆' : '😢'}</div>
+        <h1 className={`text-4xl font-black mb-2 ${isWinner ? 'text-emerald-400' : 'text-red-400'}`}>
+          {isWinner ? 'KAZANDINIZ!' : 'KAYBETTİNİZ'}
+        </h1>
         
-        {gameState === "FINISHED" && winner && (
-          <div className="bg-emerald-500/20 border border-emerald-500/50 p-8 rounded-3xl text-center w-full shadow-2xl backdrop-blur-xl text-white">
-            <h2 className="text-3xl font-bold mb-4">Oyun Bitti!</h2>
-            <p className="text-xl font-medium mb-8 text-emerald-200">
-              Kazanan: {winner === user.id ? "Sensin! 🎉" : winner}
-            </p>
-            <button 
-              onClick={() => router.replace('/lobby')}
-              className="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-3 px-8 rounded-xl transition-all"
-            >
-              Lobiye Dön
-            </button>
-          </div>
-        )}
-
-        {gameState === "PLAYING" && !question && (
-          <div className="text-white text-xl animate-pulse flex flex-col items-center gap-4">
-            <Loader2 className="animate-spin" size={32} />
-            İlk soru bekleniyor...
-          </div>
-        )}
-
-        {gameState === "PLAYING" && question && (
-          <div className="w-full flex flex-col gap-6 bg-white/5 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/10 text-white">
-            <div className="flex justify-between items-center w-full">
-              <span className="bg-emerald-500/20 text-emerald-300 px-4 py-1.5 rounded-full text-sm font-bold border border-emerald-500/30">
-                {question.type === 'ESTIMATION' ? 'Tahmin' : question.type === 'RANKING' ? 'Sıralama' : 'Çoktan Seçmeli'}
-              </span>
-              <span className={`font-mono text-3xl font-black ${timeLeft <= 3 ? 'text-red-400 animate-pulse' : 'text-gray-200'}`}>
-                {timeLeft}s
-              </span>
+        <div className="w-full max-w-sm mt-8 bg-white/5 rounded-2xl p-6 border border-white/10">
+          <h3 className="text-lg font-bold text-white mb-4">Skor Tablosu</h3>
+          {Object.entries(scores).map(([id, score]) => (
+            <div key={id} className={`flex justify-between py-2 px-3 rounded-lg mb-1 ${id === user?.id ? 'bg-emerald-500/20 text-emerald-400' : 'text-gray-300'}`}>
+              <span className="font-medium">{id === user?.id ? 'Sen' : 'Rakip'}</span>
+              <span className="font-bold">{score} puan</span>
             </div>
-            
-            <h2 className="text-2xl font-bold text-center mt-2 leading-relaxed">{question.text}</h2>
-            
-            {renderQuestionInput()}
+          ))}
+        </div>
 
-            {result && (
-              <div className="text-center mt-6 p-4 bg-black/40 rounded-2xl border border-white/5">
-                <div className={`font-black text-2xl mb-1 ${result.scoreGained > 0 ? "text-emerald-400" : "text-red-400"}`}>
-                  {result.scoreGained > 0 ? `+${result.scoreGained} Puan!` : "Puan Alamadın"}
-                </div>
-                {result.givenAnswer && (
-                  <div className="text-gray-400 text-sm">
-                    Senin Cevabın: {Array.isArray(result.givenAnswer) ? result.givenAnswer.join(' > ') : result.givenAnswer}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="mt-8 pt-6 border-t border-white/10">
-              <h3 className="font-bold text-gray-400 uppercase text-xs tracking-wider mb-4">Skor Tablosu</h3>
-              <div className="flex flex-col gap-2">
-                {Object.entries(scores).sort((a,b) => b[1] - a[1]).map(([id, score]) => (
-                  <div key={id} className={`flex justify-between p-3 rounded-xl border ${id === user.id ? 'bg-emerald-500/10 border-emerald-500/30 font-bold text-emerald-300' : 'bg-white/5 border-transparent text-gray-300'}`}>
-                    <span>{id === user.id ? "Sen" : id.substring(0,8)}</span>
-                    <span>{score} Puan</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        <button
+          onClick={() => router.push('/lobby')}
+          className="mt-8 px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl text-lg transition-colors"
+        >
+          Lobiye Dön
+        </button>
       </div>
+    );
+  }
+
+  // WAITING / PLAYING SCREEN
+  return (
+    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4">
+      {gameState === "WAITING" && !question && (
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="animate-spin text-emerald-400" size={48} />
+          <p className="text-white text-xl font-bold">Oyun başlatılıyor...</p>
+          <p className="text-gray-400 text-sm">Sorular yükleniyor, lütfen bekleyin.</p>
+        </div>
+      )}
+
+      {question && (
+        <div className="w-full max-w-md">
+          {/* Timer & Question Index */}
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-gray-400 text-sm font-medium">
+              Soru {(question.questionIndex ?? question.index ?? 0) + 1}
+            </span>
+            <div className={`px-4 py-1 rounded-full font-bold text-lg ${timeLeft <= 3 ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-white'}`}>
+              ⏱️ {timeLeft}s
+            </div>
+          </div>
+
+          {/* Score Display */}
+          {Object.keys(scores).length > 0 && (
+            <div className="flex justify-between mb-4 px-2">
+              {Object.entries(scores).map(([id, score]) => (
+                <span key={id} className={`text-sm font-bold ${id === user?.id ? 'text-emerald-400' : 'text-gray-400'}`}>
+                  {id === user?.id ? 'Sen' : 'Rakip'}: {score}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Question Card */}
+          <div className="w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl">
+            <h2 className="text-xl font-bold text-white text-center mb-2">
+              {question.text || question.questionText}
+            </h2>
+            {renderQuestionInput()}
+          </div>
+
+          {/* Result Feedback */}
+          {result && (
+            <div className={`mt-4 p-4 rounded-xl text-center font-bold ${result.isCorrect ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+              {result.isCorrect ? `✅ Doğru! +${result.score} puan` : '❌ Yanlış!'}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
