@@ -32,24 +32,38 @@ export class GamesService {
   async startGameCountdown(roomId: string) {
     this.logger.log(`Starting countdown for room ${roomId}`);
     const stateStr = await this.redisService.get(`room:${roomId}`);
-    if (!stateStr) return;
+    if (!stateStr) {
+      this.logger.error(`[startGameCountdown] Room state not found: ${roomId}`);
+      return;
+    }
     
     const state = JSON.parse(stateStr);
     state.status = 'COUNTDOWN';
 
-    // Gerçek soruları veritabanından çek (MVP için 5 soru, rastgele)
-    // Prisma'da direkt rastgele çekmek zor olduğundan şimdilik hepsini çekip karıştıralım
+    // BUG FIX: Hem version filtresi hem null guard
     const dbQuestions = await this.prismaService.question.findMany({
       take: 5,
       include: {
         versions: {
-          where: { versionNumber: 1 } // Şimdilik hep ilk versiyonu al
+          where: { versionNumber: 1 }
         }
       }
     });
 
+    // BUG FIX: Filter out questions with no valid version data
+    const validQuestions = dbQuestions.filter(
+      q => q.versions && q.versions.length > 0 && q.versions[0]
+    );
+
+    if (validQuestions.length === 0) {
+      this.logger.error(`[startGameCountdown] No valid questions found in DB! Cannot start game for room ${roomId}`);
+      // BUG FIX: Notify players instead of silently hanging
+      this.server.to(roomId).emit('error', { code: 'NO_QUESTIONS', message: 'Oyun başlatılamadı: Soru bulunamadı.' });
+      return;
+    }
+
     // Veritabanı verisini oyun state formatına çevir
-    state.questions = dbQuestions.map((q, idx) => ({
+    state.questions = validQuestions.map((q, idx) => ({
       index: idx,
       type: q.type,
       text: q.versions[0].text,
@@ -68,14 +82,23 @@ export class GamesService {
 
   async startQuestionPhase(roomId: string, questionIndex: number) {
     const stateStr = await this.redisService.get(`room:${roomId}`);
-    if (!stateStr) return;
+    if (!stateStr) {
+      this.logger.error(`[startQuestionPhase] Room state not found: ${roomId}`);
+      return;
+    }
     
     const state = JSON.parse(stateStr);
+
+    // BUG FIX: If game was already finished (e.g. double-fire), bail out
+    if (state.status === 'GAME_FINISHED') {
+      this.logger.warn(`[startQuestionPhase] Room ${roomId} already finished, skipping`);
+      return;
+    }
+
     state.status = 'QUESTION_ACTIVE';
     state.currentQuestionIndex = questionIndex;
     
-    // Redis state'e kaydettiğimiz gerçek soruyu al
-    const currentQuestion = state.questions[questionIndex];
+    const currentQuestion = state.questions?.[questionIndex];
     
     if (!currentQuestion) {
       this.logger.error(`Question ${questionIndex} not found in state!`);
@@ -84,7 +107,6 @@ export class GamesService {
 
     state.currentQuestion = currentQuestion;
     state.questionEndsAt = Date.now() + currentQuestion.durationMs;
-    // Kimlerin cevap verdiğini takip etmek için
     state.givenAnswers = {}; 
     
     await this.redisService.set(`room:${roomId}`, JSON.stringify(state), 3600);
@@ -96,7 +118,8 @@ export class GamesService {
       text: currentQuestion.text,
       metadata: currentQuestion.metadata,
       durationMs: currentQuestion.durationMs,
-      serverTime: Date.now(), // Client drift hesaplaması için
+      questionEndsAt: state.questionEndsAt, // BUG FIX: send absolute end time for client-side drift calc
+      serverTime: Date.now(),
     });
 
     // Botlar için simüle edilmiş cevapları planla
@@ -134,7 +157,6 @@ export class GamesService {
       return { success: false, error: 'Already answered' };
     }
 
-    // Cevabı state'e kaydet (Şimdilik kimin ne kadar sürede verdiği gibi detayları atlıyoruz MVP için)
     state.givenAnswers[userId] = answerData;
     await this.redisService.set(`room:${roomId}`, JSON.stringify(state), 3600);
 
@@ -146,49 +168,54 @@ export class GamesService {
     if (!stateStr) return;
     
     const state = JSON.parse(stateStr);
+
+    // BUG FIX: Guard against already-ended or game-finished states
     if (state.status !== 'QUESTION_ACTIVE' || state.currentQuestionIndex !== questionIndex) {
-       return; // Zaten bitmiş veya state kaymış
+      this.logger.warn(`[endQuestionPhase] Skipping - status: ${state.status}, idx: ${state.currentQuestionIndex} vs ${questionIndex}`);
+      return;
     }
 
     state.status = 'QUESTION_ENDED';
+
+    // BUG FIX: null guard on currentQuestion
+    const correctAnswer = state.currentQuestion?.correctAnswer;
     
-    const correctAnswer = state.currentQuestion.correctAnswer;
-    const playerResults = state.players.map((p: any) => {
-      const given = state.givenAnswers[p.userId];
+    const playerResults = (state.players || []).map((p: any) => {
+      const given = state.givenAnswers?.[p.userId];
       
-      const result = ScoringEngine.calculateScore(
-        state.currentQuestion.type,
-        given,
-        correctAnswer,
-        state.currentQuestion.metadata,
-        state.givenAnswers
-      );
+      // BUG FIX: null-safe scoring — if no question data available, score 0
+      const result = state.currentQuestion
+        ? ScoringEngine.calculateScore(
+            state.currentQuestion.type,
+            given,
+            correctAnswer,
+            state.currentQuestion.metadata,
+            state.givenAnswers
+          )
+        : { scoreGained: 0, isCorrect: false };
       
-      p.score += result.scoreGained;
+      p.score = (p.score || 0) + result.scoreGained;
       
       return {
         userId: p.userId,
         scoreGained: result.scoreGained,
-        givenAnswer: given || null,
+        givenAnswer: given ?? null,
         isCorrect: result.isCorrect
       };
     });
 
     await this.redisService.set(`room:${roomId}`, JSON.stringify(state), 3600);
 
-    // Herkese doğru cevabı ve puanları yolla
     this.server.to(roomId).emit('question_ended', {
       questionIndex,
       correctAnswer,
       playerResults
     });
 
-    // Liderlik tablosu güncellemesi (Skorlar)
-    const leaderboard = state.players.map((p: any) => ({ userId: p.userId, totalScore: p.score }));
+    const leaderboard = (state.players || []).map((p: any) => ({ userId: p.userId, totalScore: p.score }));
     this.server.to(roomId).emit('score_updated', { leaderboard });
 
-    // MVP için dbQuestions sayısına göre bitiş belirle
-    if (questionIndex >= state.questions.length - 1) {
+    if (questionIndex >= (state.questions?.length ?? 1) - 1) {
       setTimeout(() => this.finishGame(roomId), 4000);
     } else {
       setTimeout(() => this.startQuestionPhase(roomId, questionIndex + 1), 5000);
@@ -200,14 +227,25 @@ export class GamesService {
     if (!stateStr) return;
     
     const state = JSON.parse(stateStr);
+
+    // BUG FIX: Idempotency — don't settle twice
+    if (state.status === 'GAME_FINISHED') {
+      this.logger.warn(`[finishGame] Room ${roomId} already finished, skipping double-finish`);
+      return;
+    }
+
     state.status = 'GAME_FINISHED';
     await this.redisService.set(`room:${roomId}`, JSON.stringify(state), 3600);
 
-    // En yüksek skorluyu bul
-    const sortedPlayers = [...state.players].sort((a, b) => b.score - a.score);
+    // BUG FIX: guard against empty players array crashing winnerId
+    if (!state.players || state.players.length === 0) {
+      this.logger.error(`[finishGame] No players in room ${roomId}`);
+      return;
+    }
+
+    const sortedPlayers = [...state.players].sort((a, b) => (b.score || 0) - (a.score || 0));
     const winnerId = sortedPlayers[0].userId;
 
-    // Postgres Idempotent Coin Transaction
     try {
       const allPlayerIds = state.players.map((p: any) => p.userId);
       await this.walletService.settleMatch(roomId, winnerId, state.entryFee, allPlayerIds);
@@ -216,16 +254,21 @@ export class GamesService {
       
       // Update each player's client with new balance
       for (const p of state.players) {
-        const profile = await this.prismaService.playerProfile.findUnique({ where: { userId: p.userId } });
-        if (profile) {
-          this.server.to(p.userId).emit('wallet_updated', {
-            balance: profile.balance,
-            heldBalance: profile.heldBalance,
-          });
+        // BUG FIX: skip bots, they don't have real wallet state to emit
+        if (p.isBot) continue;
+        try {
+          const profile = await this.prismaService.playerProfile.findUnique({ where: { userId: p.userId } });
+          if (profile) {
+            this.server.to(p.userId).emit('wallet_updated', {
+              balance: profile.balance,
+              heldBalance: profile.heldBalance,
+            });
+          }
+        } catch (walletErr) {
+          this.logger.warn(`[finishGame] Failed to fetch wallet for ${p.userId}: ${(walletErr as Error).message}`);
         }
       }
       
-      // Settle sonrası oyunculara oyunun bittiğini bildir
       this.server.to(roomId).emit('game_finished', {
         winnerId,
         finalLeaderboard: sortedPlayers,

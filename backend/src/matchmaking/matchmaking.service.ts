@@ -21,6 +21,13 @@ export class MatchmakingService {
   async joinQueue(userId: string, gameModeId: string): Promise<void> {
     const queueName = `matchmaking_queue:${gameModeId}`;
     
+    // BUG FIX: If player is already in a room, don't let them join matchmaking again
+    const existingRoom = await this.redisService.get(`player_room:${userId}`);
+    if (existingRoom) {
+      this.logger.warn(`User ${userId} is already in room ${existingRoom}, skipping queue join`);
+      throw new Error(`You are already in a game room: ${existingRoom}`);
+    }
+
     // GameMode'dan entryFee değerini al
     const mode = await this.prisma.gameMode.findUnique({
       where: { name: gameModeId },
@@ -44,36 +51,51 @@ export class MatchmakingService {
 
   private async backfillWithBots(gameModeId: string, requiredPlayers: number) {
     const queueName = `matchmaking_queue:${gameModeId}`;
-    
-    // Kuyrukta en az 1 gerçek oyuncu var mı? (Tüm kuyruğu çekmiyoruz, var mı bakıyoruz)
-    // Şimdilik dequeue diyip var olanları çekelim
-    const currentPlayers = await this.redisService.dequeuePlayers(queueName, requiredPlayers, false);
-    
-    if (currentPlayers.length === 0) return; // Kuyrukta kimse yoksa veya iptal etmişse dön
+    const lockKey = `backfill_lock:${gameModeId}`;
 
-    if (currentPlayers.length === requiredPlayers) {
-      // Zaten yeterli oyuncu toplanmış, normal başlat
-      await this.startMatch(gameModeId, currentPlayers);
+    // BUG FIX: Redis-based lock to prevent multiple simultaneous backfills for the same mode
+    const lockSet = await this.redisService.setNX(lockKey, '1', 10);
+    if (!lockSet) {
+      this.logger.log(`Backfill for ${gameModeId} already in progress, skipping`);
       return;
     }
 
-    // Eksik olanı botlarla tamamla
-    const needed = requiredPlayers - currentPlayers.length;
-    this.logger.log(`Backfilling queue ${queueName} with ${needed} bots...`);
-    
-    const botIds = await this.botService.getAvailableBots(needed);
-    const finalPlayers = [...currentPlayers, ...botIds];
+    try {
+      const currentPlayers = await this.redisService.dequeuePlayers(queueName, requiredPlayers, false);
+      
+      if (currentPlayers.length === 0) return; // Kuyrukta kimse yoksa veya iptal etmişse dön
 
-    // GameMode'u alıp botlar için ücret bloke edelim
-    const mode = await this.prisma.gameMode.findUnique({
-      where: { name: gameModeId },
-    });
-    const entryFee = mode?.entryFee || 0;
-    for (const botId of botIds) {
-      await this.walletService.holdEntryFee(botId, entryFee);
+      if (currentPlayers.length === requiredPlayers) {
+        // Zaten yeterli oyuncu toplanmış, normal başlat
+        await this.startMatch(gameModeId, currentPlayers);
+        return;
+      }
+
+      // Eksik olanı botlarla tamamla
+      const needed = requiredPlayers - currentPlayers.length;
+      this.logger.log(`Backfilling queue ${queueName} with ${needed} bots...`);
+      
+      const botIds = await this.botService.getAvailableBots(needed);
+      const finalPlayers = [...currentPlayers, ...botIds];
+
+      // GameMode'u alıp botlar için ücret bloke edelim
+      const mode = await this.prisma.gameMode.findUnique({
+        where: { name: gameModeId },
+      });
+      const entryFee = mode?.entryFee || 0;
+      for (const botId of botIds) {
+        try {
+          await this.walletService.holdEntryFee(botId, entryFee);
+        } catch (e) {
+          this.logger.warn(`Failed to hold entry fee for bot ${botId}: ${(e as Error).message}`);
+        }
+      }
+
+      await this.startMatch(gameModeId, finalPlayers);
+    } finally {
+      // Always release the lock
+      await this.redisService.del(lockKey);
     }
-
-    await this.startMatch(gameModeId, finalPlayers);
   }
 
   private async startMatch(gameModeId: string, players: string[]) {

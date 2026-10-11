@@ -18,6 +18,13 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
+  // BUG FIX: Atomic set-if-not-exists for distributed lock pattern
+  // Returns true if lock was acquired, false if already held
+  async setNX(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+    const result = await this.redisClient.set(key, value, 'EX', ttlSeconds, 'NX');
+    return result === 'OK';
+  }
+
   async get(key: string): Promise<string | null> {
     return this.redisClient.get(key);
   }

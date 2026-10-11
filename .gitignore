@@ -7,3 +7,7 @@ build/
 .next/
 *.log
 .DS_Store
+test-*.ts
+test-*.js
+*.sql
+*.tsbuildinfo

@@ -2,7 +2,7 @@
 
 import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSocket } from '@/providers/SocketProvider';
 import { Coins, Trophy, LogOut, Loader2, Zap } from 'lucide-react';
 
@@ -12,6 +12,8 @@ export default function LobbyPage() {
   const { socket, socketState } = useSocket();
   
   const [matchStatus, setMatchStatus] = useState<string | null>(null);
+  // BUG FIX: prevent double-click sending duplicate matchmaking requests
+  const isJoiningRef = useRef(false);
 
   useEffect(() => {
     if (initialized && !isAuthenticated) {
@@ -33,6 +35,8 @@ export default function LobbyPage() {
 
     const onError = (err: any) => {
       console.error('[LOBBY] Socket error:', err);
+      // BUG FIX: reset joining lock on error
+      isJoiningRef.current = false;
       if (err.code === 'INSUFFICIENT_FUNDS') {
         alert('Bakiye yetersiz! Maça giriş için 100 Coin gereklidir.');
       } else {
@@ -46,6 +50,8 @@ export default function LobbyPage() {
       if (data.status === 'searching') {
         setMatchStatus('Rakip aranıyor...');
       } else {
+        // BUG FIX: reset joining lock when cancelled
+        isJoiningRef.current = false;
         setMatchStatus(null);
       }
     };
@@ -76,7 +82,13 @@ export default function LobbyPage() {
 
   const handleQuickJoin = () => {
     console.log('[LOBBY] handleQuickJoin clicked. Socket:', socket ? 'exists' : 'null', 'connected:', socket?.connected, 'socketState:', socketState);
+    // BUG FIX: prevent double-click sending multiple matchmaking requests
+    if (isJoiningRef.current) {
+      console.log('[LOBBY] Already joining, ignoring click');
+      return;
+    }
     if (socket && socket.connected) {
+      isJoiningRef.current = true;
       console.log('[LOBBY] Emitting join_matchmaking');
       socket.emit('join_matchmaking', { gameModeId: 'quick_2' });
     } else {
@@ -115,16 +127,19 @@ export default function LobbyPage() {
         <div className="w-full flex justify-between gap-4">
           <div className="flex-1 bg-black/40 rounded-2xl p-4 flex flex-col items-center border border-white/5">
             <Coins className="text-amber-400 mb-2" size={24} />
-            <span className="text-sm text-gray-400">Available</span>
-            <span className="text-xl font-bold text-white">{user.balance} 🪙</span>
+            <span className="text-sm text-gray-400">Bakiye</span>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-xl font-bold text-white">{user.balance}</span>
+              <Coins size={16} className="text-amber-400" />
+            </div>
             {user.heldBalance > 0 && (
-              <span className="text-xs text-orange-400 mt-1">Held: {user.heldBalance}</span>
+              <span className="text-xs text-orange-400 mt-1">Rezerve: {user.heldBalance}</span>
             )}
           </div>
           <div className="flex-1 bg-black/40 rounded-2xl p-4 flex flex-col items-center border border-white/5">
             <Trophy className="text-emerald-400 mb-2" size={24} />
-            <span className="text-sm text-gray-400">Rating</span>
-            <span className="text-xl font-bold text-white">⭐ {user.rating}</span>
+            <span className="text-sm text-gray-400">Puan (RP)</span>
+            <span className="text-xl font-bold text-white mt-1">{user.rating}</span>
           </div>
         </div>
       </div>
@@ -146,9 +161,12 @@ export default function LobbyPage() {
             <div className="relative w-full py-5 rounded-2xl bg-gray-900 border border-white/10 flex flex-col items-center justify-center gap-1 group-hover:border-emerald-500/50 transition-colors">
               <div className="flex items-center gap-2 text-white font-bold text-xl">
                 <Zap className="text-emerald-400" />
-                QUICK JOIN
+                HEMEN OYNA
               </div>
-              <span className="text-sm text-gray-400 font-medium">Entry Fee: 100 🪙</span>
+              <div className="flex items-center gap-1.5 text-sm text-gray-400 font-medium">
+                <span>Giriş Ücreti: 100</span>
+                <Coins size={14} className="text-amber-400" />
+              </div>
             </div>
           </button>
         )}

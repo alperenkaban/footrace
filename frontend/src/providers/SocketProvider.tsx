@@ -21,6 +21,8 @@ export const useSocket = () => useContext(SocketContext);
 export function SocketProvider({ children }: { children: React.ReactNode }) {
   const { accessToken, isAuthenticated } = useAuthStore();
   const [socketState, setSocketState] = useState<SocketContextType['socketState']>('DISCONNECTED');
+  // BUG FIX: Use state instead of ref so React re-renders consumers when socket changes
+  const [socket, setSocket] = useState<Socket | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -29,6 +31,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         console.log('[SOCKET] Disconnecting - not authenticated');
         socketRef.current.disconnect();
         socketRef.current = null;
+        setSocket(null);
         setSocketState('DISCONNECTED');
       }
       return;
@@ -43,6 +46,8 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     // Disconnect old socket if exists
     if (socketRef.current) {
       socketRef.current.disconnect();
+      socketRef.current = null;
+      setSocket(null);
     }
 
     console.log('[SOCKET] Connecting to', API_URL);
@@ -66,7 +71,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
     newSocket.on('connect_error', (err) => {
       console.error('[SOCKET] Connection error:', err.message);
-      if (err.message.includes('Authentication') || err.message.includes('jwt')) {
+      if (err.message.includes('Authentication') || err.message.includes('jwt') || err.message.includes('Token')) {
         setSocketState('AUTH_ERROR');
         useAuthStore.getState().logout();
       } else {
@@ -75,6 +80,8 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     });
 
     socketRef.current = newSocket;
+    // BUG FIX: expose socket via state so context consumers re-render
+    setSocket(newSocket);
     setSocketState('CONNECTING');
 
     return () => {
@@ -95,7 +102,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <SocketContext.Provider value={{ socket: socketRef.current, socketState }}>
+    <SocketContext.Provider value={{ socket, socketState }}>
       {children}
     </SocketContext.Provider>
   );
