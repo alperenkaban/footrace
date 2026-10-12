@@ -9,6 +9,7 @@ build/
 .DS_Store
 test-*.ts
 !backend/test-real-infra.ts
+!backend/test-e2e-mvp-audit.ts
 test-*.js
 *.sql
 !**/migrations/**/*.sql

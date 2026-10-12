@@ -19,13 +19,10 @@ async function main() {
         profile: {
           upsert: {
             create: {
-              displayName: `Bot ${i}`,
               rating: 1000,
               balance: 100000,
             },
-            update: {
-              displayName: `Bot ${i}`,
-            },
+            update: {},
           },
         },
       },
@@ -35,7 +32,6 @@ async function main() {
         isBot: true,
         profile: {
           create: {
-            displayName: `Bot ${i}`,
             rating: 1000,
             balance: 100000, // Botların maç girişleri için yeterli bakiyesi olsun
           },

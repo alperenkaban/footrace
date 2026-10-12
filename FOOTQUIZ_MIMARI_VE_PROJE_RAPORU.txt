@@ -321,8 +321,35 @@ Sürüm: 1.2.0 (Canliya Gecis Kapisi / Pre-Production Certified)
 - Vitest Birim ve Eşzamanlılık Testleri (`npm test`):
   * 8 test dosyası, 61/61 test GEÇTİ (%100).
 - Derleme: `npm run build` (Prisma generate + Nest build) 0 hata ile tamamlandı.
-- Migration Durumu: `prisma migrate status` tamamen güncel (2/2 migration applied).
+- Uçtan Uca MVP Kabul Testi (`backend/test-e2e-mvp-audit.ts`):
+  * Docker PostgreSQL (5433) ve Redis (6379) üzerinde 10/10 senaryo GEÇTİ (%100).
+  * Kapsanan Alanlar: Misafir JWT auth, bakiye bloke doğruluğu, quick_2 ve classic_10 bot backfill,
+    soru seçimi ve doğru cevap gizliliği, sunucu zaman otoritesi, grace period, mükerrer cevap engeli,
+    impersonation engeli, yeniden bağlanma (reconnect) oturum tespiti, tek seferlik settlement ve PvE kuralları.
+
+5. URETİM ONCESİ MVP KABUL DENETIMI VE GUVENLIK BULGULARI
+---------------------------------------------------------
+- Gerçek Maç Akışı:
+  * Misafir girişi, cüzdan bakiyesi, bot backfill, soru döngüsü ve tek seferlik settlement
+    gerçek PostgreSQL ve Redis altyapısında uçtan uca test edildi ve %100 doğrulandı.
+  * PvE bot maçlarında pot kesintisi, sahte coin basımı veya haksız rating artışı oluşmadığı kanıtlandı.
+- WebSocket ve Oyun Bütünlüğü:
+  * Cevap göndermede (`submitAnswer`) oyuncu kimliği ve oda kimliği kesin olarak sunucu tarafında
+    çözülmektedir; oyuncunun başkasının adına cevap göndermesi teknik olarak engellenmiştir.
+  * Süresi geçmiş cevaplar ve mükerrer cevaplar reddedilmektedir.
+  * [P1 BULGU]: `GameGateway.handleJoinRoom` fonksiyonunda odaya socket bazında katılım sağlanırken
+    oyuncunun o odanın resmi katılımcısı olup olmadığı doğrulanmamaktadır.
+- Üretim Operasyonları ve Açık Riskler:
+  * [P1 BULGU]: HTTP katmanında Rate Limiting (`@nestjs/throttler`) henüz etkin değildir.
+  * [P1 BULGU]: DTO seviyesinde genel `ValidationPipe` aktifleştirilmemiştir.
+  * [P1 BULGU]: CORS (`origin: '*'`) canlı alan adına kısıtlanmamıştır.
+  * [P2 BULGU]: `JWT_SECRET` için kod içi yedek fallback metni mevcuttur.
+  * [P2 BULGU]: Sistem sağlığı için `/health` endpoint'i ve otomatik `pg_dump` backup prosedürü eklenmelidir.
+- Genel Kabul Kararı:
+  * "SINIRLI BETA ICIN HAZIR (LIMITED BETA READY - Risklerle)"
+  * Kapalı kullanıcı testleri için oynanabilir, güvenli ve tutarlıdır; genel kamuya açık canlı lansmandan
+    önce listelenen P1 iyileştirmelerinin tamamlanması önerilir.
 
 ===============================================================================
-[RAPOR SONU - NOVA TARAFINDAN KAYDEDILDI - SURUM 1.3.0 - CANLIYA GECIS KAPISI ONAYLANDI]
+[RAPOR SONU - NOVA TARAFINDAN KAYDEDILDI - SURUM 1.4.0 - MVP KABUL DENETIMI TAMAMLANDI]
 ===============================================================================
