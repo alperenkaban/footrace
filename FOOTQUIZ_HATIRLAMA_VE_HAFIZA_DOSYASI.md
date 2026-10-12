@@ -72,17 +72,64 @@ Bu değişmezler asla ihlal edilemez ve her geliştirmede korunmalıdır:
 
 ---
 
-## 5. Açık Bulgular ve Sıradaki Görevler (Backlog)
+## 5. Açık Bulgular ve Sıradaki Görevler (P1 Güvenlik Aksiyon Planı)
 
-Kamuya açık genel canlı lansmandan önce çözülmesi gereken maddeler:
+Kamuya açık genel canlı lansmandan önce çözülecek maddeler ve hazır uygulama reçeteleri:
 
-- [ ] **[P1] WebSocket `join_room` Yetkilendirmesi:** `GameGateway.handleJoinRoom` içine `const userRoom = await this.matchmakingService.getPlayerRoom(userId); if (userRoom !== data.roomId) return;` kontrolü eklenmeli.
-- [ ] **[P1] HTTP Rate Limiting:** `@nestjs/throttler` paketi kurulup `/auth/guest` ve login endpoint'lerine brute-force koruması eklenmeli.
-- [ ] **[P1] Global ValidationPipe:** `main.ts` içine `app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }))` eklenmeli.
-- [ ] **[P1] CORS Sınırlandırması:** `main.ts` ve `game.gateway.ts` içindeki `origin: '*'` değeri `process.env.FRONTEND_URL` ile sınırlandırılmalı.
-- [ ] **[P2] JWT_SECRET Fail-Fast:** Ortam değişkeni tanımlanmadığında uygulamanın ayağa kalkması engellenmeli.
-- [ ] **[P2] Health Check Endpoint:** `/health` endpoint'i eklenerek DB ve Redis ping kontrolleri sağlanmalı.
-- [ ] **[P2] Backup & Rollback Runbook:** Günlük `pg_dump` cron'u ve migration geri alma kılavuzu hazırlanmalı.
+### 📌 P1.1: WebSocket `join_room` Yetkilendirmesi (Oda İzolasyonu)
+- **Hedef Dosya:** `backend/src/gateway/game.gateway.ts` (satır 86-96)
+- **Mevcut Durum:** İstemciden gelen `data.roomId` parametresi kontrol edilmeden `client.join(data.roomId)` yapılıyor.
+- **Çözüm:**
+  ```typescript
+  @SubscribeMessage('join_room')
+  async handleJoinRoom(
+    @MessageBody() data: { roomId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const userId = this.clientMapping.get(client.id);
+    if (!userId || !data.roomId) return;
+    
+    // Oyuncunun Redis'teki resmi odasını doğrula
+    const assignedRoom = await this.matchmakingService.getPlayerRoom(userId);
+    if (assignedRoom !== data.roomId) {
+      this.logger.warn(`Yetkisiz oda katılım girişimi: User ${userId} -> Room ${data.roomId}`);
+      client.emit('error', { code: 'UNAUTHORIZED_ROOM', message: 'Bu odaya katılma yetkiniz yok.' });
+      return;
+    }
+    
+    client.join(data.roomId);
+    await this.gamesService.updateMatchActivity(data.roomId);
+  }
+  ```
+
+### 📌 P1.2: HTTP API Rate Limiting (DDoS & Brute-Force Koruması)
+- **Hedef Paket:** `@nestjs/throttler`
+- **Hedef Dosyalar:** `backend/src/app.module.ts`, `backend/src/auth/auth.controller.ts`
+- **Çözüm:** `ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }])` eklenerek genel API dakikada 60 istek ile sınırlandırılacak. Özellikle `POST /auth/guest` endpoint'ine dakikada 10 istek sınırı konularak misafir hesap spam'i engellenecek.
+
+### 📌 P1.3: Global Input Doğrulama (ValidationPipe)
+- **Hedef Paketler:** `class-validator`, `class-transformer`
+- **Hedef Dosya:** `backend/src/main.ts`
+- **Çözüm:**
+  ```typescript
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+  ```
+
+### 📌 P1.4: CORS ve WebSocket Origin Sınırlandırması
+- **Hedef Dosyalar:** `backend/src/main.ts`, `backend/src/gateway/game.gateway.ts`
+- **Mevcut Durum:** `app.enableCors()` ve `cors: { origin: '*' }` (Wildcard açık).
+- **Çözüm:** `process.env.FRONTEND_URL || 'http://localhost:3000'` üzerinden yalnızca frontend etki alanına izin verilecek.
+
+### 📌 P2 Destekleyici Görevler
+- [ ] `auth.module.ts`: `JWT_SECRET` ortam değişkeni tanımlı değilse sunucunun başlamasını engelleyen fail-fast kontrolü.
+- [ ] `app.controller.ts`: PostgreSQL ve Redis ping atan `/health` endpoint'i.
+- [ ] Operasyonel `pg_dump` cron yedekleme script'i ve migration rollback dokümanı.
 
 ---
 
