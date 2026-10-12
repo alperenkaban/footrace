@@ -8,6 +8,7 @@ build/
 *.log
 .DS_Store
 test-*.ts
+!backend/test-real-infra.ts
 test-*.js
 *.sql
 !**/migrations/**/*.sql

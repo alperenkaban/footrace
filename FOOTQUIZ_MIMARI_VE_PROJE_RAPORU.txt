@@ -303,12 +303,26 @@ Sürüm: 1.2.0 (Canliya Gecis Kapisi / Pre-Production Certified)
 
 4. DOGRULANMIS TEST METRIKLERI
 ------------------------------
-- Gerçek Altyapı Testi (`test-real-infra.ts`):
-  * Docker PostgreSQL (5433) ve Redis (6379) üzerinde 12/12 senaryo GEÇTİ (%100).
+- Gerçek Altyapı Testi (`backend/test-real-infra.ts`):
+  * Docker PostgreSQL (5433) ve Redis (6379) üzerinde 20/20 senaryo GEÇTİ (%100).
+  * Kapsanan Gerçek Altyapı Alanları:
+    - 5 eşzamanlı çift iade yarışı (Single refund, zero duplicate).
+    - İki eşzamanlı settleMatch yarışı (Single prize, zero duplicate minting).
+    - Aynı kullanıcının farklı maçlardaki bağımsız hold izolasyonu.
+    - Settle + Refund + Reconcile üçlü çakışma yarışı (Tek yönlü durum geçişi).
+    - İki bağımsız backend process/instance simülasyonu (Cross-process `SELECT ... FOR UPDATE` row lock).
+    - Transaction ortasında DB kesintisi ve crash recovery (Atomik rollback, veri kaybı 0).
+    - Ağ kesintisi sonrası idempotent retry doğrulaması.
+    - Soru döngüsü, cevap ve sayaç liveness güncellemeleri (15 dk koruması).
+    - Redis anahtarı kaybolsa dahi PostgreSQL kalıcı liveness ile maçın korunması.
+    - Eşzamanlı çalışan iki reconciliation worker yarışı.
+    - Hold durumunun (REFUNDED vs SETTLED) karşılıklı dışlayıcılığı.
+    - PvE bot maçında insan oyuncunun bakiyesi, komisyonu, galibiyet ve rating koruması (0 inflation).
 - Vitest Birim ve Eşzamanlılık Testleri (`npm test`):
   * 8 test dosyası, 61/61 test GEÇTİ (%100).
 - Derleme: `npm run build` (Prisma generate + Nest build) 0 hata ile tamamlandı.
+- Migration Durumu: `prisma migrate status` tamamen güncel (2/2 migration applied).
 
 ===============================================================================
-[RAPOR SONU - NOVA TARAFINDAN KAYDEDILDI - SURUM 1.2.0 - CANLIYA GECIS KAPISI]
+[RAPOR SONU - NOVA TARAFINDAN KAYDEDILDI - SURUM 1.3.0 - CANLIYA GECIS KAPISI ONAYLANDI]
 ===============================================================================

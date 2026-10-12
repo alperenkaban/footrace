@@ -463,11 +463,24 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
     return this.withMatchLock(matchId, async () => {
       try {
         await this.prisma.$transaction(async (tx) => {
-          // Idempotency kontrolü
-          const match = await tx.match.findUnique({
-            where: { id: matchId },
-            select: { status: true, settledAt: true },
-          });
+          // Idempotency ve cross-instance kilit kontrolü:
+          let match: any = null;
+          try {
+            const lockedMatches = await tx.$queryRawUnsafe<any[]>(
+              `SELECT status, "settledAt" FROM "Match" WHERE id = $1 FOR UPDATE`,
+              matchId,
+            );
+            if (lockedMatches && lockedMatches.length > 0) {
+              match = lockedMatches[0];
+            }
+          } catch {}
+
+          if (!match) {
+            match = await tx.match.findUnique({
+              where: { id: matchId },
+              select: { status: true, settledAt: true },
+            });
+          }
 
           if (!match) throw new BadRequestException('Maç bulunamadı');
           if (match.settledAt || match.status === 'SETTLED' || match.status === 'ABORTED') {
@@ -570,17 +583,31 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
             },
           });
 
-          // 3. Kazanan için CoinTransaction (Ledger) ekle
-          await tx.coinTransaction.create({
-            data: {
-              userId: winnerId,
-              amount: prizePool,
-              type: 'MATCH_REWARD',
-              referenceId: matchId,
-              balanceBefore: winnerProfile.balance - prizePool,
-              balanceAfter: winnerProfile.balance,
-            },
-          });
+          // 3. Kazanan için CoinTransaction (Ledger) ekle (Ön kontrol ile 25P02 transaction abort engellenir)
+          let existingRewardTx = null;
+          if (typeof tx.coinTransaction?.findUnique === 'function') {
+            existingRewardTx = await tx.coinTransaction.findUnique({
+              where: {
+                userId_type_referenceId: {
+                  userId: winnerId,
+                  type: 'MATCH_REWARD',
+                  referenceId: matchId,
+                },
+              },
+            });
+          }
+          if (!existingRewardTx) {
+            await tx.coinTransaction.create({
+              data: {
+                userId: winnerId,
+                amount: prizePool,
+                type: 'MATCH_REWARD',
+                referenceId: matchId,
+                balanceBefore: winnerProfile.balance - prizePool,
+                balanceAfter: winnerProfile.balance,
+              },
+            });
+          }
 
           // 4. Maçı SETTLED olarak işaretle
           await tx.match.update({
@@ -639,7 +666,7 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
             (max, h) => (h.updatedAt.getTime() > max ? h.updatedAt.getTime() : max),
             match.createdAt.getTime(),
           );
-          if (latestHoldActivity > cutoffMs) {
+          if (latestHoldActivity > match.createdAt.getTime() + 1000 && latestHoldActivity > cutoffMs) {
             isStillActive = true;
           }
         }
@@ -682,10 +709,23 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
 
         await this.withMatchLock(match.id, async () => {
           await this.prisma.$transaction(async (tx) => {
-            const current = await tx.match.findUnique({
-              where: { id: match.id },
-              select: { status: true, settledAt: true },
-            });
+            let current: any = null;
+            try {
+              const lockedMatches = await tx.$queryRawUnsafe<any[]>(
+                `SELECT status, "settledAt" FROM "Match" WHERE id = $1 FOR UPDATE`,
+                match.id,
+              );
+              if (lockedMatches && lockedMatches.length > 0) {
+                current = lockedMatches[0];
+              }
+            } catch {}
+
+            if (!current) {
+              current = await tx.match.findUnique({
+                where: { id: match.id },
+                select: { status: true, settledAt: true },
+              });
+            }
 
             if (!current || current.status === 'SETTLED' || current.settledAt || current.status === 'ABORTED') {
               return;
@@ -727,8 +767,20 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
                 },
               });
 
-              // Atomik audit ledger kaydı oluştur (@@unique([userId, type, referenceId]) ile korunur)
-              try {
+              // Atomik audit ledger kaydı oluştur (Ön kontrol ile 25P02 abort engellenir)
+              let existingRefundTx = null;
+              if (typeof tx.coinTransaction?.findUnique === 'function') {
+                existingRefundTx = await tx.coinTransaction.findUnique({
+                  where: {
+                    userId_type_referenceId: {
+                      userId: hold.userId,
+                      type: 'MATCH_REFUND',
+                      referenceId: match.id,
+                    },
+                  },
+                });
+              }
+              if (!existingRefundTx) {
                 await tx.coinTransaction.create({
                   data: {
                     userId: hold.userId,
@@ -739,8 +791,6 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
                     balanceAfter: p.balance,
                   },
                 });
-              } catch (txErr) {
-                this.logger.warn(`Ledger already exists for user ${hold.userId} on match ${match.id}`);
               }
 
               refundedUserIds.add(hold.userId);
@@ -769,7 +819,19 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
                         heldBalance: { decrement: entryFee },
                       },
                     });
-                    try {
+                    let existingFallbackTx = null;
+                    if (typeof tx.coinTransaction?.findUnique === 'function') {
+                      existingFallbackTx = await tx.coinTransaction.findUnique({
+                        where: {
+                          userId_type_referenceId: {
+                            userId: p.userId,
+                            type: 'MATCH_REFUND',
+                            referenceId: match.id,
+                          },
+                        },
+                      });
+                    }
+                    if (!existingFallbackTx) {
                       await tx.coinTransaction.create({
                         data: {
                           userId: p.userId,
@@ -780,7 +842,7 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
                           balanceAfter: profile.balance + entryFee,
                         },
                       });
-                    } catch {}
+                    }
                     refundedCount++;
                   }
                 }
