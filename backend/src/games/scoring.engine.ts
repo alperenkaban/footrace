@@ -30,14 +30,47 @@ export class ScoringEngine {
         return this.scoreMultipleChoice(givenAnswer, correctAnswer);
       
       case QuestionType.ESTIMATION:
-        return this.scoreEstimation(givenAnswer, correctAnswer);
+        return this.scoreEstimation(Number(givenAnswer), Number(correctAnswer));
         
       case QuestionType.RANKING:
         return this.scoreRanking(givenAnswer, correctAnswer);
+
+      case QuestionType.PLAYER_GUESS:
+        return this.scorePlayerGuess(givenAnswer, correctAnswer);
+
+      case QuestionType.HARD_QUESTION:
+        return this.scoreHardQuestion(givenAnswer, correctAnswer);
+
+      case QuestionType.FINAL:
+        return this.scoreFinalQuestion(givenAnswer, correctAnswer);
         
       default:
         return { scoreGained: 0, isCorrect: false };
     }
+  }
+
+  private static scorePlayerGuess(given: string, correct: string): ScoreResult {
+    const isCorrect = String(given).trim().toLowerCase() === String(correct).trim().toLowerCase();
+    return {
+      scoreGained: isCorrect ? 1000 : 0,
+      isCorrect
+    };
+  }
+
+  private static scoreHardQuestion(given: string, correct: string): ScoreResult {
+    const isCorrect = String(given).trim().toLowerCase() === String(correct).trim().toLowerCase();
+    return {
+      scoreGained: isCorrect ? 1500 : 0,
+      isCorrect
+    };
+  }
+
+  private static scoreFinalQuestion(given: string, correct: string): ScoreResult {
+    const isCorrect = String(given).trim().toLowerCase() === String(correct).trim().toLowerCase();
+    return {
+      scoreGained: isCorrect ? 2000 : 0,
+      isCorrect
+    };
   }
 
   private static scoreMultipleChoice(given: string, correct: string): ScoreResult {

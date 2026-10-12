@@ -1,0 +1,314 @@
+================================================================================
+           FOOTQUIZ - DETAYLI MIMARI, SISTEM VE PROJE GELISIM RAPORU
+================================================================================
+Hazirlayan: Nova (AI Pair Programmer)
+Tarih: 11 Ekim 2026
+Proje Deposu: https://github.com/alperenkaban/footrace
+Calisma Alani: c:\Users\Alperen\Desktop\Footquiz
+Sürüm: 1.0.0 (Production & Local Tested)
+
+================================================================================
+BOLUM 1: PROJE VE SISTEM MIMARISI (ARCHITECTURE OVERVIEW)
+================================================================================
+
+1. GENEL BAKIS
+--------------
+FootQuiz, oyuncularin canli (real-time) olarak futbol bilgi yarismalarina katildigi,
+mikro-bahis (entry fee ve odul havuzu) mekanigine sahip, rating (RP/Elo) puanlamasi
+ve liderlik tablosu barindiran, WebSocket tabanli cok oyunculu bir platformdur.
+Oyuncular insan rakiplerle veya yeterli oyuncu olmadiginda yapay zeka botlariyla eslesir.
+
+2. TEKNOLOJI YIGINI (TECH STACK)
+--------------------------------
+- Backend:
+  * NestJS v12 (Node.js, TypeScript, ESM modulleri)
+  * Socket.io v4.8.4 (WebSocket Gateway)
+  * Prisma ORM v5.22.0
+  * PostgreSQL 15 (Docker container: localhost:5433)
+  * Redis 7 & ioredis v6 (Docker container: localhost:6379)
+  * JWT (Passport-JWT) & OAuth (Google, Facebook stratejileri)
+
+- Frontend:
+  * Next.js 16.3.8 (App Router, Turbopack)
+  * React 19.2.8
+  * TailwindCSS v4 + Ozel cam morfizim (Glassmorphism) stilleri
+  * Lucide React v1.52.0 (Ikonlar)
+  * Zustand v5 (useAuthStore - State Management & LocalStorage persist)
+  * Socket.io-client v4.8.4 (SocketProvider Context)
+
+- Altyapi ve Dagitim:
+  * Local Dev: Docker Desktop (WSL2), Docker Compose, Node dev sunuculari
+  * Production: Vercel (Frontend), Render (Backend), Cloud Postgres & Redis
+
+3. BACKEND MODUL YAPISI VE GOREVLERI
+------------------------------------
+- GatewayModule (GameGateway):
+  * WebSockets sunucusunu ayaga kaldirir.
+  * JWT ile istemci el sikismasi (handshake) kimlik dogrulamasini yapar.
+  * Olaylar: join_matchmaking, leave_matchmaking, join_room, submit_answer.
+  * Odaya yayinlar: match_found, question_started, score_updated, question_ended, game_finished, wallet_updated.
+
+- MatchmakingModule (MatchmakingService):
+  * Redis sirali kumesi (ZSET) ve listeleri ile matchmaking kuyrugunu yonetir.
+  * 5 saniye icinde insan rakip bulunamazsa bot backfill yapar.
+  * Redis `SET NX` kilidi ile coklu bot olusturma yaris durumlarini (race condition) engeller.
+  * Giris ucretini (100 Coin) WalletService uzerinden rezerve eder (heldBalance).
+
+- GamesModule (GamesService):
+  * Odalarin bellek/Redis uzerindeki durumunu (GameState) tutar.
+  * Soru dongusunu yonetir: Geri sayim (3s) -> Soru Baslangici (10s) -> Soru Sonu -> Skor Guncelleme.
+  * Skorlama Formulleri:
+    - MULTIPLE_CHOICE: Dogru cevapta sure bazli hiz bonusu (max 100 puan).
+    - ESTIMATION: Gercek cevaba yakinliga gore oransal puan.
+    - RANKING: Dogru siralanan oge sayisina gore puan.
+  * Mac bitisi: Kazanan/kaybeden belirleme, odul hesaplama (%10 komisyon kesintisi sonrasi odul havuzu), coin transferi.
+
+- WalletModule (WalletService):
+  * Bakiye sorgulama, rezerve etme, dusme ve odul ekleme.
+  * ACID uyumlu PostgreSQL islemleri ve CoinTransaction tablosu.
+  * Idempotency kurali: `[type, referenceId]` benzersizligi ile cift odul dagitimi onlenir.
+
+- BotModule (BotService):
+  * Veritabaninda tanimli 10 farkli bot hesabi (bot1@footquiz.local ... bot10@footquiz.local).
+  * Gercekci gecikme simülasyonu (2-6 saniye arasi yanit suresi) ve basari olasiligi.
+
+4. VERITABANI VE REDIS SEMASI
+-----------------------------
+- PostgreSQL (Prisma):
+  * User: id, email, isGuest, isBot, createdAt, updatedAt
+  * PlayerProfile: userId, rating (1000), balance, heldBalance, wins, losses
+  * CoinTransaction: userId, amount, type (GAME_REWARD, ENTRY_FEE), referenceId, balanceBefore, balanceAfter
+  * GameMode: name (quick_2), maxPlayers (2), questionCount (3), questionDuration (10s), entryFee (100)
+  * Question & QuestionVersion: text, metadata (options/items/min-max), correctAnswer, type
+  * Match & MatchPlayer: Mac gecmisi ve oyuncu skorlari
+
+- Redis Anahtarlari:
+  * `matchmaking_queue:{gameModeId}`: Kuyruktaki oyuncular
+  * `player_room:{userId}`: Oyuncunun aktif bulundugu oda ID'si
+  * `backfill_lock:{gameModeId}`: Bot ekleme yarisi kilidi (TTL: 5s)
+
+
+================================================================================
+BOLUM 2: BU OTURUMDA YAPILAN TUM ISLERIN DETAYLI GECMISI
+================================================================================
+
+1. GENIS CAPLI HATA DUZELTMELERI (BUG FIXES)
+--------------------------------------------
+Kullanici Bildirimi: "Bazen oynatiyor bazen oynatmiyor sacma sapan hatalar dondurebiliyor genis bir bug fix atip oyunun her kosulda calismasini sagla"
+
+Yapilan Duzeltmeler:
+a) Frontend SocketProvider Re-render Sorunu (KRITIK):
+   - Hata: Socket yalnizca `useRef` icinde tutuldugu icin soket baglandiginda React re-render tetiklemiyordu. Bu yuzden Lobby ve Game sayfalarinda `socket` null kaliyordu ve sayfa yenilenene kadar "Socket bagli degil" hatasi veriyordu.
+   - Cozum: `useState<Socket>` eklendi. Socket olustugunda `setSocket(newSocket)` cagrilarak tum alt bilesenlerin reaktif olarak guncellenmesi saglandi.
+
+b) Frontend Game Sayfasi Zamanlayici ve Cift Istek Sorunlari:
+   - Hata: `setInterval` temizlenmedigi icin soru degisimlerinde sayaçlar ust uste biniyor, hizlaniyor veya 0'da donuyordu.
+   - Hata: Kullanici siklara arka arkaya tiklayinca cift `submit_answer` gidiyordu.
+   - Hata: `result.score` sunucudan gelmiyordu, dogrusu `result.scoreGained` idi.
+   - Hata: Sunucu ile istemci saati arasindaki fark (clock drift) yuzunden zamanlayici yanlis bitiyordu.
+   - Cozum:
+     * `timerRef` ve `clearTimer()` ile temiz dongu kuruldu.
+     * `isAnswered` state kilidi ile ilk tiklamadan sonra butonlar kilitlendi.
+     * `questionEndsAt + drift` ile sunucu senkronlu kesin zamanlama hesaplandi.
+     * `joinedRoomRef` ile mükerrer `join_room` cagrilarinin onune gecildi.
+
+c) Backend GamesService Cokme (Crash) Sorunlari:
+   - Hata: Mac bittiginde `state.players` listesinde botlar da oldugu icin `walletService.getWallet(botId)` calistiriliyor, veritabaninda bot cuzdani olmadigindan sunucu 500 firlatiyor ve insan oyuncuya `game_finished` event'i hic ulasmiyordu.
+   - Cozum: `if (p.isBot) continue;` eklenerek botlar cuzdan guncellemesinden muaf tutuldu.
+   - Hata: Sorular cekilirken versiyonsuz soru geldiginde `q.versions[0]` satiri sunucuyu cokertiyordu.
+   - Cozum: Versiyonu olan sorular filtrelendi ve soru bulunamazsa odaya guvenli hata firlatildi.
+   - Hata: `finishGame` fonksiyonu ayni mac icin art arda tetiklenebiliyordu.
+   - Cozum: `if (state.status === 'GAME_FINISHED') return;` idempotency kontrolu konuldu.
+
+d) Backend Matchmaking Yaris Durumu (Race Condition):
+   - Hata: 5 saniyelik bot bekleme suresi bittiginde ayni anda birden fazla kontrol calisiyor ve cift bot eklenip 2 ayri oda baslatiliyordu.
+   - Cozum: Redis `setNX(backfill_lock:{gameModeId}, 'locked', 5)` ile dagitik kilit kuruldu.
+
+2. YEREL ORTAM CALISTIRMA (LOCAL RUN & SERVICES)
+------------------------------------------------
+- Docker Desktop:
+  * Windows uzerinde Explorer oturumu (`explorer.exe "Docker Desktop.exe"`) ile baslatildi ve WSL2 baglantisi kuruldu.
+- Veritabani & Onbellek:
+  * PostgreSQL (Port 5433): `footquiz-postgres` calistirildi, `npx prisma db push` ile tablolar senkronize edildi.
+  * Redis (Port 6379): Calisan Redis teyit edildi, PING-PONG yaniti alindi.
+  * Veritabani Tohumlama: `npx tsx prisma/seed.ts` calistirilarak 10 bot hesabi, `quick_2` modu ve futbol sorulari eklendi.
+- Backend Servisi:
+  * `c:\Users\Alperen\Desktop\Footquiz\backend` dizininde `npm run start:dev` baslatildi.
+  * Port: http://localhost:4000 (CORS aktif, Socket Gateway hazir).
+- Frontend Servisi:
+  * `c:\Users\Alperen\Desktop\Footquiz\frontend` icine `.env.local` yazildi (`NEXT_PUBLIC_API_URL=http://localhost:4000`).
+  * `npm run dev` baslatildi. Port: http://localhost:4001 (Next.js Turbopack).
+
+3. TARAYICI TESTI VE DOM IYILESTIRMELERI (DOM POLISH)
+-----------------------------------------------------
+Browser subagent ile http://localhost:4001 uzerinde tam bir tur mac oynandi ve DOM eksikleri tespit edilip duzeltildi:
+- Baslik & Meta: Varsayilan "Create Next App", "FootQuiz | Canli Futbol Bilgi Yarismasi" olarak guncellendi.
+- Para Ikonu: Tarayicilarda kare kutu cikaran `🪙` emojileri yerine Lucide `Coins` vektorel altin ikonu yerlestirildi.
+- Soru Ekrani: Soru numarasi rozeti (`SORU 1`), nabiz atan sure hapi ve yumusak CSS animasyonlu canlı zaman cubugu (Progress Bar) eklendi.
+- Canli Skor Alani: "Sen vs Rakip" anlik puan kartlari yerlestirildi.
+- Mac Sonu (GameOver):
+  * Kazanilan Altin (`+180 Coin`) ve RP degisimi (`+20 RP` / `-10 RP`) gostergeleri eklendi.
+  * Detayli mac sonucu tablosunda oyuncu adi ve bot rakip adi, kazanan taci (`👑`) gosterildi.
+  * "Tekrar Oyna" ve "Lobiye Don" butonlari eklendi.
+
+4. GITHUB VE VERCEL DAGITIMI (DEPLOYMENT)
+-----------------------------------------
+- `next build` yerelde calistirildi, tip hatasi veya derleme uyarisi olmadigi dogrulandi.
+- `.gitignore` dosyasina test scriptleri ve tsbuildinfo eklendi.
+- Tum degisiklikler `main` dalina commitlendi:
+  Commit: `e8c5060 - fix: Game flow stability, socket re-render reactivity, timer leaks and DOM polish`
+- `git push origin main` ile `https://github.com/alperenkaban/footrace` reposuna gonderildi.
+- Vercel otomatik deploy tetiklendi.
+
+
+================================================================================
+BOLUM 3: GELECEK OTURUMLARDA PROJEYI YERELDE BASLATMA REHBERI
+================================================================================
+
+Sonraki oturumlarda projeyi yerelde calistirmak icin asagidaki adimlar izlenir:
+
+1. DOCKER SERVISLERI KONTROLU:
+   cmd / powershell:
+   > docker ps
+   Eger calismiyorsa:
+   > docker compose up -d
+
+2. BACKEND DEV SUNUCUSU:
+   > cd c:\Users\Alperen\Desktop\Footquiz\backend
+   > npm run start:dev
+   (Sunucu http://localhost:4000 uzerinde calisir)
+
+3. FRONTEND DEV SUNUCUSU:
+   > cd c:\Users\Alperen\Desktop\Footquiz\frontend
+   > npm run dev
+   (Uygulama http://localhost:4001 uzerinde calisir)
+
+4. VERITABANI SIFIRLAMA / YENIDEN TOHUMLAMA GEREKIRSE:
+   > cd c:\Users\Alperen\Desktop\Footquiz\backend
+   > npx prisma db push
+   > npx tsx prisma/seed.ts
+
+================================================================================
+BOLUM 4: EKONOMI GUVENLIGI, BOTLU MACLAR (PvE MODU) VE SETTLEMENT REVIZYONU
+================================================================================
+
+1. EKONOMI GUVENLIGI VE ACIK ANALIZI (SECURITY AUDIT)
+----------------------------------------------------
+- Problem (Karsiliksiz Coin Uretimi & Enflasyon):
+  Eski sistemde 1 gercek oyuncu + 9 bot eslesmesinde oyuncudan 100 coin aliniyor, botlar para odemese
+  dahi pot 10 * 100 = 1000 coin hesaplaniyor ve kazanana 900 coin odeniyordu.
+  Bu durum sistemin her botlu macta havadan +800 coin basmasina ve haksiz bakiye farm'ina yol aciyordu.
+- Ayrica botlar liderlik tablosunda yer aliyor, mac kazandikca gercek oyuncularin rating siralamasini isgal ediyordu.
+
+2. UYGULANAN COZUM: SECENEK C (UCRETSIZ PvE / ANTRENMAN MODU)
+-------------------------------------------------------------
+- Kesin Ekonomi Kurallari:
+  1) Yalnizca 10 gercek oyuncunun yer aldigi ve tum oyuncularin giris ucretini odedigi maclar rekabetcidir (Competitive).
+  2) Bir macta tek bir bot bile varsa (`isBot: true`), mac otomatik olarak PvE Antrenman Modu kabul edilir.
+  3) Botlu maclarda gercek oyunculardan ASLA giris ucreti alinmaz (`effectiveEntryFee = 0`).
+  4) Eger gercek oyuncu kuyruktayken ucreti bloke edilmis (`heldBalance`) ve ardindan bot backfill ile botlu maca
+     gecilmis ise, oyuncunun giris ucreti derhal ve eksiksiz iade edilir.
+  5) Botlu maclarda karsiliksiz coin basimi (MATCH_REWARD) yapilmaz; komisyon kesilmez; kazanan odulu 0 coindir.
+  6) Botlu maclar gercek oyuncularin veya botlarin rekabetci rating (RP), galibiyet (wins) veya liderlik siralamasini degistirmez.
+  7) Botlar gercek oyuncu cuzdanlarindan asla coin transferi alamaz.
+
+3. KOD DUZEYINDEKI REVIZYONLAR
+------------------------------
+a) WalletService (`backend/src/wallet/wallet.service.ts`):
+   - `refundEntryFee(userId, amount)`: Idempotent bloke iadesi eklendi. Oyuncunun `heldBalance` degeri yeterli ise
+     guvenle iade eder; daha once iade edilmisse (cift tetikleme durumunda) cift odeme yapmaz ve `false` doner.
+   - `settleMatch(matchId, winnerId, entryFee, allPlayerIds, isPvE)`:
+     Veritabani duzeyinde oyuncu listesinde bot olup olmadigi (`tx.user.findMany({ where: { isBot: true } })`) dogrulanir.
+     Eger bot varsa veya `isPvE: true` ise:
+     * 0 coin odul verilir.
+     * Rating ve galibiyet artisi yapilmaz.
+     * CoinTransaction (Ledger) olusturulmaz.
+     * Mac PostgreSQL'de `SETTLED` olarak isaretlenir (Idempotency korunur).
+
+b) MatchmakingService (`backend/src/matchmaking/matchmaking.service.ts`):
+   - `backfillWithBots`: Botlar icin ucret bloke etme kodu kaldirildi. Kuyruktaki gercek oyuncularin rezerve edilen ucretleri
+     `refundEntryFee` ile aninda iade edilerek mac baslatildi.
+   - `initializeRoom`: Odaya bot dahil edildigi anda `roomState.isPvE = true`, `roomState.entryFee = 0` set edildi.
+     Ekstra guvenlik onlemi olarak odadaki insan oyuncularin ucretleri cift kontrolden gecirilerek iade teyit edildi.
+
+c) GamesService (`backend/src/games/games.service.ts`):
+   - `finishGame`: Oda state'i ve oyuncu listesi taranarak `isPvE` tespiti yapildi.
+   - `settleMatch` fonksiyonuna `isPvE` bayragi aktarildi.
+   - Odaya yayinlanan `game_finished` soket olayinda `rewards: { coins: 0, ratingChange: 0 }` ve `isPvE: true` gonderildi.
+
+d) LeaderboardService (`backend/src/leaderboard/leaderboard.service.ts`):
+   - `getGlobalLeaderboard` sorgusuna `where: { user: { isBot: false } }` filtresi eklendi.
+   - Botlar rekabetci global liderlik tablosundan tamamen izole edildi.
+
+e) Frontend Game Ekrani (`frontend/src/app/game/[roomId]/page.tsx`):
+   - JavaScript `0 || 180` ve `0 || 20` falsy bug'i duzeltilerek nullish coalescing (`?? 0`) uygulandi.
+   - PvE antrenman maclari tamamlandiginda oyuncuya ozel "🎮 PvE Antrenman Modu (Giris Ucreti Alinmadi, Odul & Rating Etkisiz)"
+     bilgilendirme rozeti gosterildi.
+
+4. DOGRULAMA VE TEST SONUCLARI
+------------------------------
+- Vitest Test Paketi: 7 test dosyasi, 33 birim/entegrasyon testi %100 basariyla gecti (`npm test`: 1.21s).
+- Bot Becerisi Simülasyonu: 12.000 turda Acemi %60.7, Normal %75.3, Usta %90.4 ile agirlikli %75.45 bot dogrulugu olculdu.
+- Frontend Derlemesi: `next build` hatasiz ve 0 TypeScript uyarisiz tamamlandi.
+
+================================================================================
+BOLUM 4: P0 EKONOMI GUVENLIGI, MATCHHOLD YASAM DONGUSU, CANLILIK VE BASELINE
+================================================================================
+Tarih: 12 Ekim 2026
+Sürüm: 1.2.0 (Canliya Gecis Kapisi / Pre-Production Certified)
+
+1. MATCHHOLD MODELI VE ACIK ILISKILENDIRME (EXPLICIT BINDING)
+--------------------------------------------------------------
+- Eski Acik: Kuyruktaki bloke bakiyeler `matchId: null` uzerinden baglandiginda ayni kullanicinin
+  farkli sekmelerdeki hold kayitlari birbirine karisabiliyordu.
+- Cozum:
+  * `MatchmakingService.joinQueue`: Bloke olusturuldugunda olusan spesifik `holdId`, Redis'te
+    `player_hold:${userId}` anahtarina kaydedildi.
+  * `MatchmakingService.leaveQueue`: Kuyruktan cikista `player_hold:${userId}` okunarak
+    `walletService.refundHoldRecord(holdId)` cagrildi.
+  * `MatchmakingService.initializeRoom`: Eslestirilen tum oyuncularin `holdId` degerleri toplanip
+    `walletService.bindHoldsToMatch([{ userId, holdId }])` seklinde acik parametrelerle iletildi.
+  * `WalletService.bindHoldsToMatch`: `where: { id: targetHoldId, userId, status: 'HELD', matchId: null }`
+    filtresi ve PostgreSQL `SELECT ... FOR UPDATE` satir kilidi ile izole edildi.
+  * Bir hold yalnizca tek bir maca baglanabilir; ayni hold ikinci bir maca baglanamaz.
+
+2. CIFT KATMANLI CANLILIK (LIVENESS) VE GUVELI RECONCILIATION
+--------------------------------------------------------------
+- Eski Acik: `createdAt < 15dk` olan her aktif mac sunucu tarafindan terk edilmis sanilip iptal ediliyordu.
+- Cozum:
+  * `GamesService.updateMatchActivity(roomId)`:
+    - Redis'e `match_activity:${roomId}` timestamp'i yazar.
+    - `room:${roomId}` icindeki `lastActivityAt` degerini gunceller.
+    - PostgreSQL'de `MatchHold.updatedAt` kolonunu anlik zamana ceker.
+  * Tetiklenme Noktalari: Geri sayim baslangici, soru baslangici, cevap gonderimi, soru bitisi
+    ve oyuncu yeniden baglanma (`handleJoinRoom`).
+  * `WalletService.reconcileStaleMatches(15)`:
+    - `MatchHold.updatedAt` 15 dakika icindeyse iptal ATLANIR (PostgreSQL kalici sigortasi).
+    - Redis `match_activity` veya `room.lastActivityAt` 15 dakika icindeyse iptal ATLANIR.
+    - Redis restart edilse veya oda anahtari silinse dahi aktif mac iptal EDILMEZ.
+    - Yalnizca hem Redis'te hem PostgreSQL'de 15 dakikadir hic aktivite gostermemis gercek terk edilmis
+      maclar atomik olarak `ABORTED` yapilir ve bakiye eksiksiz iade edilir.
+
+3. BASELINE MIGRATION ZINCIRI DENETIMI
+---------------------------------------
+- Mevcut Durum: Geliştirme veritabanı tabloları başlangıçta `prisma db push` ile açıldığından
+  `prisma/migrations` dizininde sadece `20261012_p0_match_hold_and_ledger` mevcuttu.
+- Dogrulama:
+  * Scratch alanında `0_init.sql` oluşturuldu (başlangıç tabloları ve enum'lar).
+  * Boş test veritabanında (`footquiz_migrate_verify`) sıralı olarak `20261011000000_init` ve
+    `20261012_p0_match_hold_and_ledger` deploy edildi.
+  * `prisma migrate diff` ile canlı DB ve `schema.prisma` karşılaştırıldı: "No difference detected."
+  * Canlı geliştirme DB'sinde hiçbir tabloya DROP/TRUNCATE veya reset uygulanmadı;
+    kullanıcı onayı sonrası `prisma migrate resolve --applied 20261011000000_init` uygulanmak üzere hazırlandı.
+
+4. DOGRULANMIS TEST METRIKLERI
+------------------------------
+- Gerçek Altyapı Testi (`test-real-infra.ts`):
+  * Docker PostgreSQL (5433) ve Redis (6379) üzerinde 12/12 senaryo GEÇTİ (%100).
+- Vitest Birim ve Eşzamanlılık Testleri (`npm test`):
+  * 8 test dosyası, 61/61 test GEÇTİ (%100).
+- Derleme: `npm run build` (Prisma generate + Nest build) 0 hata ile tamamlandı.
+
+===============================================================================
+[RAPOR SONU - NOVA TARAFINDAN KAYDEDILDI - SURUM 1.2.0 - CANLIYA GECIS KAPISI]
+===============================================================================

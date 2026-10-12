@@ -1,146 +1,150 @@
 import { PrismaClient } from '@prisma/client';
+import * as fs from 'fs';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Veritabanı temizleniyor...');
-  await prisma.questionVersion.deleteMany({});
-  await prisma.question.deleteMany({});
-  
-  // Bot Kullanıcılarını oluştur
-  for (let i = 1; i <= 10; i++) {
+  console.log('Seeding başlatılıyor...');
+
+  // 1. Bot Kullanıcılarını oluştur (Idempotent upsert - 20 Bot)
+  for (let i = 1; i <= 20; i++) {
     await prisma.user.upsert({
       where: { email: `bot${i}@footquiz.local` },
-      update: {},
+      update: {
+        profile: {
+          upsert: {
+            create: {
+              displayName: `Bot ${i}`,
+              rating: 1000,
+              balance: 100000,
+            },
+            update: {
+              displayName: `Bot ${i}`,
+            },
+          },
+        },
+      },
       create: {
         email: `bot${i}@footquiz.local`,
         isGuest: false,
         isBot: true,
         profile: {
           create: {
+            displayName: `Bot ${i}`,
             rating: 1000,
-            balance: 100000, // Botların bol parası olsun
-          }
-        }
-      }
+            balance: 100000, // Botların maç girişleri için yeterli bakiyesi olsun
+          },
+        },
+      },
     });
   }
-  console.log('Bot kullanıcıları eklendi...');
+  console.log('20 Bot kullanıcısı hazır.');
 
-  console.log('GameMode ekleniyor...');
-  const gameMode = await prisma.gameMode.upsert({
+  // 2. GameMode ekle / güncelle (Idempotent upsert)
+  // quick_2 (2 Kişilik Hızlı Maç - 3 Soru)
+  await prisma.gameMode.upsert({
     where: { name: 'quick_2' },
-    update: {},
+    update: {
+      maxPlayers: 2,
+      questionCount: 3,
+      questionDuration: 10,
+      entryFee: 100,
+      rewardMultiplier: 1.0,
+      ratingEnabled: false,
+    },
     create: {
       name: 'quick_2',
       maxPlayers: 2,
-      questionCount: 3, // MVP test için kısa
+      questionCount: 3,
       questionDuration: 10,
-      entryFee: 100, // Giriş ücreti
+      entryFee: 100,
       rewardMultiplier: 1.0,
       ratingEnabled: false,
     },
   });
+  console.log("GameMode 'quick_2' hazır.");
 
-  console.log('Futbol Soruları ekleniyor...');
-
-  // Soru 1: Çoktan Seçmeli
-  const q1 = await prisma.question.create({
-    data: {
-      code: 'q_messi_birth',
-      type: 'MULTIPLE_CHOICE',
-      versions: {
-        create: {
-          text: 'Messi hangi ülkede doğmuştur?',
-          metadata: {
-            options: ['Arjantin', 'İspanya', 'Brezilya', 'Uruguay']
-          },
-          correctAnswer: 'Arjantin',
-          versionNumber: 1,
-        }
-      }
-    }
+  // classic_10 (10 Kişilik Büyük Turnuva - 10 Soru)
+  await prisma.gameMode.upsert({
+    where: { name: 'classic_10' },
+    update: {
+      maxPlayers: 10,
+      questionCount: 10,
+      questionDuration: 10,
+      entryFee: 100,
+      rewardMultiplier: 1.0,
+      ratingEnabled: true,
+    },
+    create: {
+      name: 'classic_10',
+      maxPlayers: 10,
+      questionCount: 10,
+      questionDuration: 10,
+      entryFee: 100,
+      rewardMultiplier: 1.0,
+      ratingEnabled: true,
+    },
   });
+  console.log("GameMode 'classic_10' hazır.");
 
-  // Soru 2: Çoktan Seçmeli
-  const q2 = await prisma.question.create({
-    data: {
-      code: 'q_ucl_most_wins',
-      type: 'MULTIPLE_CHOICE',
-      versions: {
-        create: {
-          text: 'Şampiyonlar Ligi kupasını en çok kazanan takım hangisidir?',
-          metadata: {
-            options: ['Barcelona', 'AC Milan', 'Real Madrid', 'Bayern Münih']
-          },
-          correctAnswer: 'Real Madrid',
+  // 3. Harici questions.json dosyasından soruları yükle (Idempotent upsert)
+  const questionsPath = path.join(__dirname, 'questions.json');
+  if (!fs.existsSync(questionsPath)) {
+    throw new Error(`questions.json dosyası bulunamadı: ${questionsPath}`);
+  }
+
+  const questionsData = JSON.parse(fs.readFileSync(questionsPath, 'utf-8'));
+  console.log(`${questionsData.length} soru veritabanına aktarılıyor / senkronize ediliyor...`);
+
+  let count = 0;
+  for (const q of questionsData) {
+    const question = await prisma.question.upsert({
+      where: { code: q.code },
+      update: {
+        type: q.type,
+      },
+      create: {
+        code: q.code,
+        type: q.type,
+      },
+    });
+
+    await prisma.questionVersion.upsert({
+      where: {
+        questionId_versionNumber: {
+          questionId: question.id,
           versionNumber: 1,
-        }
-      }
-    }
-  });
+        },
+      },
+      update: {
+        text: q.text,
+        metadata: q.metadata,
+        correctAnswer: q.correctAnswer,
+        isActive: true,
+      },
+      create: {
+        questionId: question.id,
+        versionNumber: 1,
+        text: q.text,
+        metadata: q.metadata,
+        correctAnswer: q.correctAnswer,
+        isActive: true,
+      },
+    });
+    count++;
+  }
 
-  // Soru 3: Çoktan Seçmeli
-  const q3 = await prisma.question.create({
-    data: {
-      code: 'q_uefa_2000_turkish',
-      type: 'MULTIPLE_CHOICE',
-      versions: {
-        create: {
-          text: '2000 yılında UEFA Kupasını kazanan Türk takımı hangisidir?',
-          metadata: {
-            options: ['Fenerbahçe', 'Galatasaray', 'Beşiktaş', 'Trabzonspor']
-          },
-          correctAnswer: 'Galatasaray',
-          versionNumber: 1,
-        }
-      }
-    }
-  });
-
-  // Soru 4: Tahmin (ESTIMATION)
-  const q4 = await prisma.question.create({
-    data: {
-      code: 'q_ronaldo_total_goals',
-      type: 'ESTIMATION',
-      versions: {
-        create: {
-          text: 'Cristiano Ronaldo profesyonel kariyerinde toplam kaç gol atmıştır? (Yaklaşık - 2024 itibariyle)',
-          metadata: {
-            min: 500,
-            max: 1200
-          },
-          correctAnswer: 900,
-          versionNumber: 1,
-        }
-      }
-    }
-  });
-
-  // Soru 5: Sıralama (RANKING)
-  const q5 = await prisma.question.create({
-    data: {
-      code: 'q_world_cup_winners_order',
-      type: 'RANKING',
-      versions: {
-        create: {
-          text: 'Aşağıdaki takımları Dünya Kupası kazanma sayılarına göre ÇOKTAN AZA doğru sıralayın.',
-          metadata: {
-            items: ['Brezilya', 'İtalya', 'Arjantin', 'İngiltere'] // Sadece şıklar, karışık sırayla verilebilir
-          },
-          correctAnswer: ['Brezilya', 'İtalya', 'Arjantin', 'İngiltere'], // Doğru sıralama
-          versionNumber: 1,
-        }
-      }
-    }
-  });
-
-  console.log('Tohumlama (Seeding) tamamlandı!');
+  console.log(`Tohumlama (Seeding) tamamlandı! Toplam ${count} soru hazır.`);
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('Seeding hatası:', e);
     process.exit(1);
   })
   .finally(async () => {

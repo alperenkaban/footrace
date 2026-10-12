@@ -21,31 +21,73 @@ export class MatchmakingService {
   async joinQueue(userId: string, gameModeId: string): Promise<void> {
     const queueName = `matchmaking_queue:${gameModeId}`;
     
-    // BUG FIX: If player is already in a room, don't let them join matchmaking again
+    // 1. Zaten aktif bir odada mı kontrol et (GAME_FINISHED kalıntı kontrolleri ile self-healing)
     const existingRoom = await this.redisService.get(`player_room:${userId}`);
     if (existingRoom) {
-      this.logger.warn(`User ${userId} is already in room ${existingRoom}, skipping queue join`);
-      throw new Error(`You are already in a game room: ${existingRoom}`);
+      const roomData = await this.redisService.get(`room:${existingRoom}`);
+      let isFinished = false;
+      if (roomData) {
+        try {
+          const parsed = JSON.parse(roomData);
+          if (parsed.status === 'GAME_FINISHED') {
+            isFinished = true;
+          }
+        } catch {
+          isFinished = false;
+        }
+      }
+
+      if (isFinished) {
+        // Settlement sonrasında temizlenememiş kalıntı odayı temizle
+        await this.redisService.del(`player_room:${userId}`);
+      } else {
+        this.logger.warn(`User ${userId} is already in active room ${existingRoom}, skipping queue join`);
+        throw new Error(`You are already in a game room: ${existingRoom}`);
+      }
     }
 
-    // GameMode'dan entryFee değerini al
-    const mode = await this.prisma.gameMode.findUnique({
-      where: { name: gameModeId },
-    });
-    const entryFee = mode?.entryFee || 0;
+    // 2. Atomik olarak kuyruk kilidini al (Aynı anda iki ayrı kuyruğa girişi engeller)
+    const lockKey = `player_queue_lock:${userId}`;
+    const acquired = await this.redisService.setNX(lockKey, gameModeId, 5);
+    if (!acquired) {
+      this.logger.warn(`User ${userId} queue operation is already in progress, skipping concurrent join`);
+      throw new Error(`Eşleştirme işlemi zaten devam ediyor`);
+    }
 
-    // Oyuncunun bakiyesini bloke et (Eğer yeterli değilse hata fırlatacak)
-    await this.walletService.holdEntryFee(userId, entryFee);
+    try {
+      const existingQueue = await this.redisService.get(`player_queue:${userId}`);
+      if (existingQueue) {
+        this.logger.warn(`User ${userId} is already in queue ${existingQueue}`);
+        throw new Error(`You are already in matchmaking queue for ${existingQueue}`);
+      }
 
-    await this.redisService.enqueuePlayer(queueName, userId);
-    this.logger.log(`User ${userId} joined queue ${queueName} (Fee: ${entryFee})`);
-    
-    // Normal match araması
-    const matched = await this.tryMatch(gameModeId, mode?.maxPlayers || 2); 
-    
-    if (!matched) {
-      // Eğer maç bulunamadıysa, 3 saniye sonra botlarla doldur
-      setTimeout(() => this.backfillWithBots(gameModeId, mode?.maxPlayers || 2), 3000);
+      // GameMode'dan entryFee değerini al
+      const mode = await this.prisma.gameMode.findUnique({
+        where: { name: gameModeId },
+      });
+      const entryFee = mode?.entryFee || 0;
+
+      // Oyuncunun bakiyesini bloke et (Eğer yeterli değilse hata fırlatacak)
+      const holdRes = await this.walletService.holdEntryFee(userId, entryFee, { gameModeId: mode?.id });
+      const holdId = holdRes?.holdId;
+
+      // Kuyruk ve açık hold takibini Redis'e kaydet
+      await this.redisService.set(`player_queue:${userId}`, gameModeId, 3600);
+      if (holdId) {
+        await this.redisService.set(`player_hold:${userId}`, holdId, 3600);
+      }
+      await this.redisService.enqueuePlayer(queueName, userId);
+      this.logger.log(`User ${userId} joined queue ${queueName} (Fee: ${entryFee}, Hold: ${holdId || 'none'})`);
+      
+      // Normal match araması
+      const matched = await this.tryMatch(gameModeId, mode?.maxPlayers || 2); 
+      
+      if (!matched) {
+        // Eğer maç bulunamadıysa, 3 saniye sonra botlarla doldur
+        setTimeout(() => this.backfillWithBots(gameModeId, mode?.maxPlayers || 2), 3000);
+      }
+    } finally {
+      await this.redisService.del(lockKey);
     }
   }
 
@@ -53,7 +95,7 @@ export class MatchmakingService {
     const queueName = `matchmaking_queue:${gameModeId}`;
     const lockKey = `backfill_lock:${gameModeId}`;
 
-    // BUG FIX: Redis-based lock to prevent multiple simultaneous backfills for the same mode
+    // Redis kilidi ile eşzamanlı bot doldurmalarını engelle
     const lockSet = await this.redisService.setNX(lockKey, '1', 10);
     if (!lockSet) {
       this.logger.log(`Backfill for ${gameModeId} already in progress, skipping`);
@@ -75,25 +117,17 @@ export class MatchmakingService {
       const needed = requiredPlayers - currentPlayers.length;
       this.logger.log(`Backfilling queue ${queueName} with ${needed} bots...`);
       
+      // Halihazırda oyunda olan botları hariç tut
       const botIds = await this.botService.getAvailableBots(needed);
       const finalPlayers = [...currentPlayers, ...botIds];
 
-      // GameMode'u alıp botlar için ücret bloke edelim
-      const mode = await this.prisma.gameMode.findUnique({
-        where: { name: gameModeId },
-      });
-      const entryFee = mode?.entryFee || 0;
-      for (const botId of botIds) {
-        try {
-          await this.walletService.holdEntryFee(botId, entryFee);
-        } catch (e) {
-          this.logger.warn(`Failed to hold entry fee for bot ${botId}: ${(e as Error).message}`);
-        }
-      }
-
+      // KURAL (PvE / Bot Maçı Güvenliği):
+      // Bot içeren maçlar ücretsiz antrenman maçıdır.
+      // Botlardan asla ücret alınmaz; kuyruktaki gerçek oyuncuların ücretleri initializeRoom içinde
+      // maça bağlanıp refundMatchHolds ile tam bir kez iade edilir.
       await this.startMatch(gameModeId, finalPlayers);
     } finally {
-      // Always release the lock
+      // Kilidi her zaman serbest bırak
       await this.redisService.del(lockKey);
     }
   }
@@ -101,6 +135,11 @@ export class MatchmakingService {
   private async startMatch(gameModeId: string, players: string[]) {
     const roomId = uuidv4();
     this.logger.log(`Match found! Room: ${roomId}, Players: ${players.join(', ')}`);
+
+    // Eşleşen oyuncuların kuyruk durumunu temizle
+    for (const p of players) {
+      await this.redisService.del(`player_queue:${p}`);
+    }
 
     // Odayı Redis'te başlat
     await this.initializeRoom(roomId, players, gameModeId);
@@ -112,18 +151,45 @@ export class MatchmakingService {
     this.gamesService.startGameCountdown(roomId);
   }
 
-  async leaveQueue(userId: string, gameModeId: string): Promise<void> {
+  async leaveQueue(userId: string, gameModeId: string): Promise<boolean> {
+    const queuedMode = await this.redisService.get(`player_queue:${userId}`);
+    // Eğer oyuncu bu kuyrukta değilse veya zaten çıkmışsa çift iade yapma
+    if (queuedMode !== gameModeId) {
+      this.logger.warn(`User ${userId} is not registered in queue ${gameModeId}, skipping refund`);
+      return false;
+    }
+
     const queueName = `matchmaking_queue:${gameModeId}`;
     await this.redisService.removeFromQueue(queueName, userId);
+    await this.redisService.del(`player_queue:${userId}`);
     
-    // GameMode ücretini iade et
-    const mode = await this.prisma.gameMode.findUnique({
-      where: { name: gameModeId },
-    });
-    const entryFee = mode?.entryFee || 0;
-    
-    await this.walletService.releaseHold(userId, entryFee);
-    this.logger.log(`User ${userId} left queue ${queueName} (Refund: ${entryFee})`);
+    // Açık hold ID kaydı varsa spesifik olarak o hold'u iade et
+    const holdId = await this.redisService.get(`player_hold:${userId}`);
+    if (holdId) {
+      await this.redisService.del(`player_hold:${userId}`);
+      await this.walletService.refundHoldRecord(holdId);
+      this.logger.log(`User ${userId} left queue ${queueName} (Direct Hold Refund: ${holdId})`);
+    } else {
+      // GameMode ücretini iade et (fallback)
+      const mode = await this.prisma.gameMode.findUnique({
+        where: { name: gameModeId },
+      });
+      const entryFee = mode?.entryFee || 0;
+      await this.walletService.releaseHold(userId, entryFee);
+      this.logger.log(`User ${userId} left queue ${queueName} (Refund: ${entryFee})`);
+    }
+    return true;
+  }
+
+  /**
+   * Soket bağlantısı kopan oyuncuyu otomatik olarak kuyruktan çıkar ve parasını iade et
+   */
+  async handleUserDisconnect(userId: string): Promise<void> {
+    const activeQueueMode = await this.redisService.get(`player_queue:${userId}`);
+    if (activeQueueMode) {
+      this.logger.log(`User ${userId} disconnected while in queue ${activeQueueMode}. Auto-refunding...`);
+      await this.leaveQueue(userId, activeQueueMode);
+    }
   }
 
   // Bu fonksiyon kuyruktan oyuncu alıp odaya koymaya çalışır
@@ -148,7 +214,6 @@ export class MatchmakingService {
   }
 
   private async initializeRoom(roomId: string, players: string[], gameModeId: string): Promise<void> {
-    // GameMode ID bul (name üzerinden bulup gerçek ID'sini almalıyız)
     const mode = await this.prisma.gameMode.findUnique({
       where: { name: gameModeId },
     });
@@ -169,26 +234,65 @@ export class MatchmakingService {
       },
     });
 
-    // DB'den oyuncu profillerini çekip isBot bilgisini alalım
+    // Bekleyen bloke kayıtlarını açık hold ID'leriyle topla ve bu maça bağla
+    const playerHolds: { userId: string; holdId?: string }[] = [];
+    for (const pid of players) {
+      const holdId = await this.redisService.get(`player_hold:${pid}`);
+      if (holdId) {
+        await this.redisService.del(`player_hold:${pid}`);
+        playerHolds.push({ userId: pid, holdId });
+      } else {
+        playerHolds.push({ userId: pid });
+      }
+    }
+
+    await this.walletService.bindHoldsToMatch(playerHolds, roomId);
+
+    // DB'den kullanıcıları çekip isBot ve isim bilgisini alalım
     const users = await this.prisma.user.findMany({
       where: { id: { in: players } },
-      select: { id: true, isBot: true }
+      select: {
+        id: true,
+        email: true,
+        isBot: true,
+      },
     });
 
-    const isBotMap = new Map(users.map(u => [u.id, u.isBot]));
+    const hasBots = users.some(u => u.isBot);
+    const effectiveEntryFee = hasBots ? 0 : mode.entryFee;
+
+    // Eğer botlu maç ise ve insan oyuncuların bloke bakiyesi varsa maça bağlı hold üzerinden garantili iade yap
+    if (hasBots && mode.entryFee > 0) {
+      await this.walletService.refundMatchHolds(roomId);
+    }
+
+    const userMap = new Map(
+      users.map((u) => [
+        u.id,
+        {
+          isBot: u.isBot,
+          displayName: u.email ? u.email.split('@')[0] : (u.isBot ? 'Bot' : 'Oyuncu'),
+        },
+      ]),
+    );
 
     const roomState = {
       roomId,
-      gameModeName: gameModeId, // Redis için isim tut
-      entryFee: mode.entryFee,  // Settle için sakla
+      gameModeName: gameModeId,
+      entryFee: effectiveEntryFee,
+      isPvE: hasBots,
       status: 'PLAYER_READY',
-      players: players.map((id) => ({
-        userId: id,
-        ready: false,
-        score: 0,
-        connected: true,
-        isBot: isBotMap.get(id) || false,
-      })),
+      players: players.map((id) => {
+        const u = userMap.get(id);
+        return {
+          userId: id,
+          displayName: u?.displayName || (u?.isBot ? 'Bot' : 'Oyuncu'),
+          ready: false,
+          score: 0,
+          connected: true,
+          isBot: u?.isBot ?? false,
+        };
+      }),
       createdAt: Date.now(),
     };
 

@@ -20,6 +20,7 @@ export default function GamePage() {
   const [scores, setScores] = useState<Record<string, number>>({});
   const [winner, setWinner] = useState<string | null>(null);
   const [rewards, setRewards] = useState<{ coins: number; ratingChange: number } | null>(null);
+  const [isPvE, setIsPvE] = useState<boolean>(false);
   const [finalLeaderboard, setFinalLeaderboard] = useState<any[]>([]);
 
   // BUG FIX: track answered state separately to prevent double-submit
@@ -134,6 +135,7 @@ export default function GamePage() {
       clearTimer();
       setWinner(data.winnerId);
       setRewards(data.rewards || null);
+      setIsPvE(Boolean(data.isPvE));
       setFinalLeaderboard(data.finalLeaderboard || []);
       setGameState("FINISHED");
     };
@@ -323,46 +325,60 @@ export default function GamePage() {
             {isWinner ? 'Tebrikler! Rakibini mağlup ederek ödülleri topladın.' : 'Üzülme, futbol şansı bir sonraki maçta seninle olabilir.'}
           </p>
 
-          {/* Rewards Grid */}
-          <div className="w-full grid grid-cols-2 gap-3 mb-6">
-            <div className="bg-black/40 rounded-2xl p-3 flex flex-col items-center border border-white/5">
-              <span className="text-xs text-gray-400 mb-1">Altın</span>
-              <div className="flex items-center gap-1.5">
-                <span className={`text-base font-bold ${isWinner ? 'text-amber-400' : 'text-gray-400'}`}>
-                  {isWinner ? `+${rewards?.coins || 180}` : '0'}
+          {/* Rewards Grid / PvE Notice */}
+          {isPvE ? (
+            <div className="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-3.5 mb-6 flex flex-col items-center">
+              <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                <span>🎮</span> PvE Antrenman Modu
+              </span>
+              <p className="text-[11px] text-gray-400 text-center leading-relaxed">
+                Bu maçta botlar yer aldığı için ücretsiz antrenman olarak değerlendirildi. Giriş ücreti alınmadı, coin ve rating değişimi yapılmadı.
+              </p>
+            </div>
+          ) : (
+            <div className="w-full grid grid-cols-2 gap-3 mb-6">
+              <div className="bg-black/40 rounded-2xl p-3 flex flex-col items-center border border-white/5">
+                <span className="text-xs text-gray-400 mb-1">Altın</span>
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-base font-bold ${isWinner ? 'text-amber-400' : 'text-gray-400'}`}>
+                    {isWinner ? `+${rewards?.coins ?? 0}` : '0'}
+                  </span>
+                  <Coins size={14} className="text-amber-400" />
+                </div>
+              </div>
+              <div className="bg-black/40 rounded-2xl p-3 flex flex-col items-center border border-white/5">
+                <span className="text-xs text-gray-400 mb-1">Puan (RP)</span>
+                <span className={`text-base font-bold ${isWinner ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {isWinner ? `+${rewards?.ratingChange ?? 0}` : `-${rewards?.ratingChange ?? 0}`}
                 </span>
-                <Coins size={14} className="text-amber-400" />
               </div>
             </div>
-            <div className="bg-black/40 rounded-2xl p-3 flex flex-col items-center border border-white/5">
-              <span className="text-xs text-gray-400 mb-1">Puan (RP)</span>
-              <span className={`text-base font-bold ${isWinner ? 'text-emerald-400' : 'text-red-400'}`}>
-                {isWinner ? `+${rewards?.ratingChange || 20}` : `-${rewards?.ratingChange || 10}`}
-              </span>
-            </div>
-          </div>
+          )}
 
           {/* Leaderboard */}
           <div className="w-full bg-black/40 rounded-2xl p-4 border border-white/5 mb-6">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Maç Sonucu</h3>
-            <div className="space-y-2">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+              Maç Sıralaması ({finalLeaderboard.length || Object.keys(scores).length} Oyuncu)
+            </h3>
+            <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
               {finalLeaderboard.length > 0 ? (
                 finalLeaderboard.map((player: any, idx: number) => {
                   const isMe = player.userId === user?.id;
                   const isMatchWinner = player.userId === winner;
+                  const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`;
                   return (
                     <div 
                       key={player.userId || idx} 
-                      className={`flex items-center justify-between p-3 rounded-xl border ${
+                      className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
                         isMatchWinner 
                           ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' 
                           : 'bg-white/5 border-white/5 text-gray-300'
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-500">#{idx + 1}</span>
-                        <span className="font-semibold text-sm flex items-center gap-1">
-                          {isMe ? `${user?.displayName} (Sen)` : (player.isBot ? `🤖 Bot Oyuncu` : `Rakip`)}
+                        <span className="text-xs font-bold text-gray-400 w-6 text-center">{medal}</span>
+                        <span className="font-semibold text-sm flex items-center gap-1.5">
+                          {isMe ? `${user?.displayName} (Sen)` : (player.displayName || (player.isBot ? `🤖 Bot ${idx + 1}` : `Oyuncu ${idx + 1}`))}
                           {isMatchWinner && <span className="text-amber-400 text-xs">👑</span>}
                         </span>
                       </div>
@@ -447,26 +463,72 @@ export default function GamePage() {
 
           {/* Score Header */}
           {Object.keys(scores).length > 0 && (
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              {Object.entries(scores).map(([id, score]) => {
-                const isMe = id === user?.id;
-                return (
-                  <div 
-                    key={id} 
-                    className={`px-3 py-2 rounded-xl flex items-center justify-between border ${
-                      isMe 
-                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' 
-                        : 'bg-white/5 border-white/10 text-gray-300'
-                    }`}
-                  >
-                    <span className="text-xs font-medium truncate max-w-[90px]">
-                      {isMe ? 'Sen' : 'Rakip'}
+            Object.keys(scores).length > 2 ? (
+              // 10-Player Responsive Score Header
+              <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-3 mb-4 flex flex-col gap-2">
+                <div className="flex justify-between items-center text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-emerald-400">
+                    <span>Sıralaman:</span>
+                    <span className="bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/30">
+                      #{Object.entries(scores)
+                        .sort(([, a], [, b]) => b - a)
+                        .findIndex(([id]) => id === user?.id) + 1} / {Object.keys(scores).length}
                     </span>
-                    <span className="text-sm font-bold">{score} Puan</span>
+                    <span className="text-white ml-1">({scores[user?.id || ''] || 0} Puan)</span>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="text-gray-400 text-[11px] flex items-center gap-1">
+                    <span>👑 Lider:</span>
+                    <span className="text-amber-300 font-bold">
+                      {Math.max(...Object.values(scores))} Puan
+                    </span>
+                  </div>
+                </div>
+                {/* Horizontal compact score badges */}
+                <div className="flex gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar text-[11px]">
+                  {Object.entries(scores)
+                    .sort(([, a], [, b]) => b - a)
+                    .map(([id, score], idx) => {
+                      const isMe = id === user?.id;
+                      return (
+                        <div
+                          key={id}
+                          className={`flex-shrink-0 px-2.5 py-1 rounded-lg border flex items-center gap-1.5 ${
+                            isMe
+                              ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold'
+                              : 'bg-black/30 border-white/5 text-gray-400'
+                          }`}
+                        >
+                          <span className="text-[10px] opacity-75">#{idx + 1}</span>
+                          <span>{isMe ? 'Sen' : `P${idx + 1}`}</span>
+                          <span className="font-bold">{score}p</span>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            ) : (
+              // 2-Player Score Header
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {Object.entries(scores).map(([id, score]) => {
+                  const isMe = id === user?.id;
+                  return (
+                    <div 
+                      key={id} 
+                      className={`px-3 py-2 rounded-xl flex items-center justify-between border ${
+                        isMe 
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' 
+                          : 'bg-white/5 border-white/10 text-gray-300'
+                      }`}
+                    >
+                      <span className="text-xs font-medium truncate max-w-[90px]">
+                        {isMe ? 'Sen' : 'Rakip'}
+                      </span>
+                      <span className="text-sm font-bold">{score} Puan</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )
           )}
 
           {/* Question Card */}

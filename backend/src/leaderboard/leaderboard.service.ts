@@ -19,8 +19,13 @@ export class LeaderboardService {
       return JSON.parse(cached);
     }
 
-    // Top 100 players by rating
+    // Top 100 players by rating (BOTS EXCLUDED from competitive leaderboard)
     const topPlayers = await this.prisma.playerProfile.findMany({
+      where: {
+        user: {
+          isBot: false,
+        },
+      },
       orderBy: { rating: 'desc' },
       take: limit,
       select: {

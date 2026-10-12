@@ -5,6 +5,7 @@ import { WalletService } from '../wallet/wallet.service.js';
 import { BotService } from '../bot/bot.service.js';
 import { Server } from 'socket.io';
 import { ScoringEngine } from './scoring.engine.js';
+import { QuestionSelector } from './question-selector.js';
 
 @Injectable()
 export class GamesService {
@@ -29,8 +30,37 @@ export class GamesService {
     }
   }
 
+  /**
+   * Maçın canlılık (liveness) zamanını hem Redis hem PostgreSQL seviyesinde günceller.
+   * Böylece aktif maçlar reconciliation tarafından asla yanlışlıkla iptal edilmez.
+   */
+  async updateMatchActivity(roomId: string): Promise<void> {
+    try {
+      const now = Date.now();
+      await this.redisService.set(`match_activity:${roomId}`, now.toString(), 3600);
+      const stateStr = await this.redisService.get(`room:${roomId}`);
+      if (stateStr) {
+        try {
+          const state = JSON.parse(stateStr);
+          state.lastActivityAt = now;
+          await this.redisService.set(`room:${roomId}`, JSON.stringify(state), 3600);
+        } catch {}
+      }
+      // PostgreSQL kalıcı canlılık güncellemesi (Redis anahtarı kaybolsa dahi korur)
+      if (this.prismaService?.matchHold?.updateMany) {
+        await this.prismaService.matchHold.updateMany({
+          where: { matchId: roomId, status: 'HELD' },
+          data: { updatedAt: new Date(now) },
+        });
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to update match activity for ${roomId}: ${(err as Error).message}`);
+    }
+  }
+
   async startGameCountdown(roomId: string) {
     this.logger.log(`Starting countdown for room ${roomId}`);
+    await this.updateMatchActivity(roomId);
     const stateStr = await this.redisService.get(`room:${roomId}`);
     if (!stateStr) {
       this.logger.error(`[startGameCountdown] Room state not found: ${roomId}`);
@@ -40,37 +70,40 @@ export class GamesService {
     const state = JSON.parse(stateStr);
     state.status = 'COUNTDOWN';
 
-    // BUG FIX: Hem version filtresi hem null guard
-    const dbQuestions = await this.prismaService.question.findMany({
-      take: 5,
-      include: {
-        versions: {
-          where: { versionNumber: 1 }
-        }
+    // GameMode üzerinden soru sayısını ve süresini belirle
+    let targetQuestionCount = 3;
+    let questionDurationMs = 10000;
+    if (state.gameModeName) {
+      const mode = await this.prismaService.gameMode.findUnique({
+        where: { name: state.gameModeName },
+      });
+      if (mode) {
+        targetQuestionCount = mode.questionCount || 3;
+        questionDurationMs = (mode.questionDuration || 10) * 1000;
       }
-    });
-
-    // BUG FIX: Filter out questions with no valid version data
-    const validQuestions = dbQuestions.filter(
-      q => q.versions && q.versions.length > 0 && q.versions[0]
-    );
-
-    if (validQuestions.length === 0) {
-      this.logger.error(`[startGameCountdown] No valid questions found in DB! Cannot start game for room ${roomId}`);
-      // BUG FIX: Notify players instead of silently hanging
-      this.server.to(roomId).emit('error', { code: 'NO_QUESTIONS', message: 'Oyun başlatılamadı: Soru bulunamadı.' });
-      return;
     }
 
-    // Veritabanı verisini oyun state formatına çevir
-    state.questions = validQuestions.map((q, idx) => ({
-      index: idx,
-      type: q.type,
-      text: q.versions[0].text,
-      metadata: q.versions[0].metadata,
-      correctAnswer: q.versions[0].correctAnswer,
-      durationMs: 10000,
-    }));
+    try {
+      // Rastgele ve maç içerisinde benzersiz (tekrarsız) soruları seç
+      const selectedQuestions = await QuestionSelector.selectRandomUniqueQuestions(
+        this.prismaService,
+        targetQuestionCount,
+        questionDurationMs,
+      );
+
+      if (!selectedQuestions || selectedQuestions.length === 0) {
+        throw new Error('NO_QUESTIONS');
+      }
+
+      state.questions = selectedQuestions;
+    } catch (err) {
+      this.logger.error(`[startGameCountdown] Soru seçimi başarısız: ${(err as Error).message}`);
+      this.server.to(roomId).emit('error', {
+        code: 'NO_QUESTIONS',
+        message: 'Oyun başlatılamadı: Yeterli aktif soru bulunamadı.',
+      });
+      return;
+    }
 
     await this.redisService.set(`room:${roomId}`, JSON.stringify(state), 3600);
 
@@ -110,6 +143,7 @@ export class GamesService {
     state.givenAnswers = {}; 
     
     await this.redisService.set(`room:${roomId}`, JSON.stringify(state), 3600);
+    await this.updateMatchActivity(roomId);
 
     // Doğru cevap OLMADAN client'a soruyu yolla
     this.server.to(roomId).emit('question_started', {
@@ -159,6 +193,7 @@ export class GamesService {
 
     state.givenAnswers[userId] = answerData;
     await this.redisService.set(`room:${roomId}`, JSON.stringify(state), 3600);
+    await this.updateMatchActivity(roomId);
 
     return { success: true };
   }
@@ -205,6 +240,7 @@ export class GamesService {
     });
 
     await this.redisService.set(`room:${roomId}`, JSON.stringify(state), 3600);
+    await this.updateMatchActivity(roomId);
 
     this.server.to(roomId).emit('question_ended', {
       questionIndex,
@@ -223,6 +259,13 @@ export class GamesService {
   }
 
   async finishGame(roomId: string) {
+    const finishLockKey = `finish_lock:${roomId}`;
+    const acquired = await this.redisService.setNX(finishLockKey, '1', 60);
+    if (!acquired) {
+      this.logger.warn(`[finishGame] Concurrent finish already in progress for room ${roomId}, skipping`);
+      return;
+    }
+
     const stateStr = await this.redisService.get(`room:${roomId}`);
     if (!stateStr) return;
     
@@ -246,11 +289,18 @@ export class GamesService {
     const sortedPlayers = [...state.players].sort((a, b) => (b.score || 0) - (a.score || 0));
     const winnerId = sortedPlayers[0].userId;
 
+    const isPvE = Boolean(
+      state.isPvE ||
+      !state.entryFee ||
+      state.entryFee <= 0 ||
+      state.players.some((p: any) => p.isBot),
+    );
+
     try {
       const allPlayerIds = state.players.map((p: any) => p.userId);
-      await this.walletService.settleMatch(roomId, winnerId, state.entryFee, allPlayerIds);
+      await this.walletService.settleMatch(roomId, winnerId, state.entryFee || 0, allPlayerIds, isPvE);
       
-      this.logger.log(`Game ${roomId} finished & settled. Winner: ${winnerId}`);
+      this.logger.log(`Game ${roomId} finished & settled (PvE: ${isPvE}). Winner: ${winnerId}`);
       
       // Update each player's client with new balance
       for (const p of state.players) {
@@ -269,10 +319,14 @@ export class GamesService {
         }
       }
       
+      const coinsReward = isPvE ? 0 : (state.entryFee ? (state.entryFee * state.players.length) * 0.9 : 0);
+      const ratingReward = isPvE ? 0 : 20;
+
       this.server.to(roomId).emit('game_finished', {
         winnerId,
         finalLeaderboard: sortedPlayers,
-        rewards: { coins: state.entryFee ? (state.entryFee * state.players.length) * 0.9 : 0, ratingChange: 20 }
+        rewards: { coins: coinsReward, ratingChange: ratingReward },
+        isPvE,
       });
     } catch (e) {
       this.logger.error(`Error settling match ${roomId}: ${(e as Error).message}`);
@@ -283,6 +337,11 @@ export class GamesService {
         finalLeaderboard: sortedPlayers,
         rewards: { coins: 0, ratingChange: 0 }
       });
+    } finally {
+      // Maç bittiği için oyuncuların aktif oda eşleşmesini Redis'ten temizle (tekrar eşleşebilsinler)
+      for (const p of state.players) {
+        await this.redisService.del(`player_room:${p.userId}`);
+      }
     }
   }
 }

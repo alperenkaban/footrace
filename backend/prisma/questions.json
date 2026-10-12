@@ -1,0 +1,1217 @@
+[
+  {
+    "code": "q_messi_ballondor_count",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Lionel Messi kariyeri boyunca kaç kez Ballon d'Or (Altın Top) ödülünü kazanmıştır?",
+    "metadata": {
+      "options": ["6", "7", "8", "9"]
+    },
+    "correctAnswer": "8"
+  },
+  {
+    "code": "q_cr7_ballondor_count",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Cristiano Ronaldo kariyeri boyunca kaç kez Ballon d'Or ödülü kazanmıştır?",
+    "metadata": {
+      "options": ["4", "5", "6", "7"]
+    },
+    "correctAnswer": "5"
+  },
+  {
+    "code": "q_pele_world_cups",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Futbol efsanesi Pelé, kariyerinde kaç kez Dünya Kupası şampiyonluğu yaşamıştır?",
+    "metadata": {
+      "options": ["1", "2", "3", "4"]
+    },
+    "correctAnswer": "3"
+  },
+  {
+    "code": "q_maradona_hand_of_god_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Tarihî futbol olayları",
+    "text": "Diego Maradona'nın meşhur 'Tanrı'nın Eli' golünü attığı Dünya Kupası hangi yılda düzenlenmiştir?",
+    "metadata": {
+      "options": ["1982", "1986", "1990", "1994"]
+    },
+    "correctAnswer": "1986"
+  },
+  {
+    "code": "q_zidane_headbutt_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Tarihî futbol olayları",
+    "text": "Zinedine Zidane'ın finalde Materazzi'ye kafa atarak kırmızı kart gördüğü Dünya Kupası hangi yıldır?",
+    "metadata": {
+      "options": ["1998", "2002", "2006", "2010"]
+    },
+    "correctAnswer": "2006"
+  },
+  {
+    "code": "q_ucl_most_titles_club",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Şampiyonlar Ligi / Şampiyon Kulüpler Kupası tarihinin en çok şampiyon olan kulübü hangisidir?",
+    "metadata": {
+      "options": ["AC Milan", "Liverpool", "Real Madrid", "Bayern Münih"]
+    },
+    "correctAnswer": "Real Madrid"
+  },
+  {
+    "code": "q_real_madrid_ucl_count",
+    "type": "MULTIPLE_CHOICE",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Real Madrid 2024 yılı itibarıyla toplam kaç Şampiyonlar Ligi şampiyonluğu kazanmıştır?",
+    "metadata": {
+      "options": ["13", "14", "15", "16"]
+    },
+    "correctAnswer": "15"
+  },
+  {
+    "code": "q_ac_milan_ucl_count",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "İtalyan devi AC Milan toplam kaç kez Şampiyonlar Ligi kupasını müzesine götürmüştür?",
+    "metadata": {
+      "options": ["5", "6", "7", "8"]
+    },
+    "correctAnswer": "7"
+  },
+  {
+    "code": "q_galatasaray_uefa_2000",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Galatasaray, 2000 yılı UEFA Kupası finalinde hangi İngiliz takımını penaltılarla mağlup etmiştir?",
+    "metadata": {
+      "options": ["Arsenal", "Chelsea", "Leeds United", "Manchester United"]
+    },
+    "correctAnswer": "Arsenal"
+  },
+  {
+    "code": "q_hakan_sukur_fastest_goal",
+    "type": "MULTIPLE_CHOICE",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Hakan Şükür'ün 2002 Dünya Kupası'nda Güney Kore'ye attığı en hızlı gol kaçıncı saniyededir?",
+    "metadata": {
+      "options": ["9. saniye", "11. saniye", "14. saniye", "17. saniye"]
+    },
+    "correctAnswer": "11. saniye"
+  },
+  {
+    "code": "q_first_world_cup_host",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Turnuvalar",
+    "text": "1930 yılında düzenlenen ilk FIFA Dünya Kupası'na hangi ülke ev sahipliği yapmıştır?",
+    "metadata": {
+      "options": ["Brezilya", "Uruguay", "İtalya", "Arjantin"]
+    },
+    "correctAnswer": "Uruguay"
+  },
+  {
+    "code": "q_world_cup_most_titles_country",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Milli takımlar",
+    "text": "FIFA Dünya Kupası'nı 5 kez ile en çok kazanan ülke hangisidir?",
+    "metadata": {
+      "options": ["Almanya", "İtalya", "Brezilya", "Arjantin"]
+    },
+    "correctAnswer": "Brezilya"
+  },
+  {
+    "code": "q_arsenal_invincibles_season",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Arsenal, Premier Lig'i namağlup şampiyon tamamladığı 'Yenilmezler' (Invincibles) sezonu hangisidir?",
+    "metadata": {
+      "options": ["2001-2002", "2002-2003", "2003-2004", "2004-2005"]
+    },
+    "correctAnswer": "2003-2004"
+  },
+  {
+    "code": "q_leicester_pl_champion_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Leicester City'nin Claudio Ranieri yönetiminde tarihi Premier Lig şampiyonluğu kazandığı yıl hangisidir?",
+    "metadata": {
+      "options": ["2014-2015", "2015-2016", "2016-2017", "2017-2018"]
+    },
+    "correctAnswer": "2015-2016"
+  },
+  {
+    "code": "q_istanbul_miracle_2005",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Tarihî futbol olayları",
+    "text": "2005 İstanbul Şampiyonlar Ligi finalinde Liverpool, AC Milan karşısında ilk yarıyı kaç kaç geride kapatmıştı?",
+    "metadata": {
+      "options": ["1-0", "2-0", "3-0", "3-1"]
+    },
+    "correctAnswer": "3-0"
+  },
+  {
+    "code": "q_euro_2004_champion",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Turnuvalar",
+    "text": "EURO 2004 Avrupa Futbol Şampiyonası finalinde Portekiz'i 1-0 mağlup ederek şampiyon olan sürpriz takım hangisidir?",
+    "metadata": {
+      "options": ["Çek Cumhuriyeti", "Danimarka", "Yunanistan", "Hırvatistan"]
+    },
+    "correctAnswer": "Yunanistan"
+  },
+  {
+    "code": "q_euro_1992_champion",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Turnuvalar",
+    "text": "Turnuvaya tatilden çağrılarak son anda katılan ve EURO 1992'de şampiyon olan ülke hangisidir?",
+    "metadata": {
+      "options": ["İsveç", "Danimarka", "Hollanda", "Norveç"]
+    },
+    "correctAnswer": "Danimarka"
+  },
+  {
+    "code": "q_klose_world_cup_goals",
+    "type": "MULTIPLE_CHOICE",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Dünya Kupası tarihinin en golcü oyuncusu olan Miroslav Klose toplam kaç gol atmıştır?",
+    "metadata": {
+      "options": ["14", "15", "16", "17"]
+    },
+    "correctAnswer": "16"
+  },
+  {
+    "code": "q_just_fontaine_single_wc",
+    "type": "MULTIPLE_CHOICE",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Tek bir Dünya Kupası turnuvasında (1958) en çok gol atma rekorunu 13 golle elinde tutan Fransız forvet kimdir?",
+    "metadata": {
+      "options": ["Just Fontaine", "Michel Platini", "Jean-Pierre Papin", "Thierry Henry"]
+    },
+    "correctAnswer": "Just Fontaine"
+  },
+  {
+    "code": "q_ballon_dor_2024_winner",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "2024 yılı erkekler Ballon d'Or ödülünü kazanan İspanyol orta saha oyuncusu kimdir?",
+    "metadata": {
+      "options": ["Vinicius Jr.", "Jude Bellingham", "Rodri", "Dani Carvajal"]
+    },
+    "correctAnswer": "Rodri"
+  },
+  {
+    "code": "q_haaland_birthplace",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Norveçli golcü Erling Haaland hangi ülkede doğmuştur?",
+    "metadata": {
+      "options": ["Norveç", "İngiltere", "Almanya", "Avusturya"]
+    },
+    "correctAnswer": "İngiltere"
+  },
+  {
+    "code": "q_modric_ballondor_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Luka Modric, Messi ve Ronaldo hegemonyasını kırarak Ballon d'Or ödülünü hangi yılda kazanmıştır?",
+    "metadata": {
+      "options": ["2016", "2017", "2018", "2019"]
+    },
+    "correctAnswer": "2018"
+  },
+  {
+    "code": "q_kaka_ballondor_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Brezilyalı yıldız Kaká hangi yılda Ballon d'Or ödülünü kazanmıştır?",
+    "metadata": {
+      "options": ["2005", "2006", "2007", "2008"]
+    },
+    "correctAnswer": "2007"
+  },
+  {
+    "code": "q_lev_yashin_ballondor",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Tarihte Ballon d'Or kazanan tek kaleci olan efsane eldiven kimdir?",
+    "metadata": {
+      "options": ["Dino Zoff", "Gordon Banks", "Lev Yashin", "Gianluigi Buffon"]
+    },
+    "correctAnswer": "Lev Yashin"
+  },
+  {
+    "code": "q_george_weah_ballondor",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Ballon d'Or kazanan ilk ve tek Afrikalı futbolcu kimdir?",
+    "metadata": {
+      "options": ["Samuel Eto'o", "Didier Drogba", "George Weah", "Roger Milla"]
+    },
+    "correctAnswer": "George Weah"
+  },
+  {
+    "code": "q_mourinho_porto_ucl_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "José Mourinho, FC Porto ile Şampiyonlar Ligi şampiyonluğunu hangi yılda kazanmıştır?",
+    "metadata": {
+      "options": ["2002", "2003", "2004", "2005"]
+    },
+    "correctAnswer": "2004"
+  },
+  {
+    "code": "q_chelsea_first_ucl_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Chelsea kulübü tarihindeki ilk Şampiyonlar Ligi zaferini hangi yılda Münih'te kazanmıştır?",
+    "metadata": {
+      "options": ["2008", "2010", "2012", "2014"]
+    },
+    "correctAnswer": "2012"
+  },
+  {
+    "code": "q_man_city_first_ucl_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Manchester City tarihindeki ilk Şampiyonlar Ligi zaferini hangi yılda İstanbul'da kazanmıştır?",
+    "metadata": {
+      "options": ["2021", "2022", "2023", "2024"]
+    },
+    "correctAnswer": "2023"
+  },
+  {
+    "code": "q_bvb_ucl_champion_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Borussia Dortmund kulübü tarihindeki tek Şampiyonlar Ligi zaferini hangi yıl Juventus'u yenerek kazanmıştır?",
+    "metadata": {
+      "options": ["1995", "1997", "1999", "2001"]
+    },
+    "correctAnswer": "1997"
+  },
+  {
+    "code": "q_red_star_ucl_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Kızılyıldız (Crvena Zvezda) hangi yılda Şampiyon Kulüpler Kupası'nı kazanarak Doğu Avrupa tarihine geçmiştir?",
+    "metadata": {
+      "options": ["1988", "1991", "1993", "1995"]
+    },
+    "correctAnswer": "1991"
+  },
+  {
+    "code": "q_steaua_bucharest_ucl_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Romanya temsilcisi Steaua Bükreş hangi yıl Barcelona'yı penaltılarda yenerek Şampiyon Kulüpler Kupası'nı kazanmıştır?",
+    "metadata": {
+      "options": ["1984", "1986", "1988", "1990"]
+    },
+    "correctAnswer": "1986"
+  },
+  {
+    "code": "q_germany_brazil_7_1_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Tarihî futbol olayları",
+    "text": "Almanya'nın Brezilya'yı tarihi 7-1'lik skorla mağlup ettiği Dünya Kupası yarı finali hangi yıldadır?",
+    "metadata": {
+      "options": ["2010", "2014", "2018", "2022"]
+    },
+    "correctAnswer": "2014"
+  },
+  {
+    "code": "q_turkey_2002_wc_coach",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Milli takımlar",
+    "text": "2002 Dünya Kupası'nda Türkiye Milli Takımı'nı dünya üçüncülüğüne taşıyan teknik direktör kimdir?",
+    "metadata": {
+      "options": ["Fatih Terim", "Mustafa Denizli", "Şenol Güneş", "Ersun Yanal"]
+    },
+    "correctAnswer": "Şenol Güneş"
+  },
+  {
+    "code": "q_turkey_euro_2008_semifinal",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Milli takımlar",
+    "text": "EURO 2008'de yarı finale yükselen Türkiye, bu turda hangi takıma 3-2 mağlup olarak elenmiştir?",
+    "metadata": {
+      "options": ["İspanya", "Almanya", "Portekiz", "Rusya"]
+    },
+    "correctAnswer": "Almanya"
+  },
+  {
+    "code": "q_semih_senturk_croatia_goal",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Tarihî futbol olayları",
+    "text": "EURO 2008 çeyrek finalinde Semih Şentürk'ün Hırvatistan'a attığı unutulmaz beraberlik golü kaçıncı dakikada gelmiştir?",
+    "metadata": {
+      "options": ["115", "118", "120+2", "120+5"]
+    },
+    "correctAnswer": "120+2"
+  },
+  {
+    "code": "q_ilhan_mansiz_golden_goal",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Tarihî futbol olayları",
+    "text": "2002 Dünya Kupası çeyrek finalinde İlhan Mansız, hangi ülkeye altın gol atarak Türkiye'yi yarı finale taşımıştır?",
+    "metadata": {
+      "options": ["Japonya", "Senegal", "Güney Kore", "Kosta Rika"]
+    },
+    "correctAnswer": "Senegal"
+  },
+  {
+    "code": "q_super_lig_unbeaten_champion",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Süper Lig tarihinde 1991-1992 sezonunu namağlup şampiyon tamamlayan tek takım hangisidir?",
+    "metadata": {
+      "options": ["Galatasaray", "Fenerbahçe", "Beşiktaş", "Trabzonspor"]
+    },
+    "correctAnswer": "Beşiktaş"
+  },
+  {
+    "code": "q_super_lig_all_time_top_scorer",
+    "type": "MULTIPLE_CHOICE",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Süper Lig tarihinin 249 golle en çok gol atan futbolcusu kimdir?",
+    "metadata": {
+      "options": ["Tanju Çolak", "Hami Mandıralı", "Hakan Şükür", "Aykut Kocaman"]
+    },
+    "correctAnswer": "Hakan Şükür"
+  },
+  {
+    "code": "q_tanju_colak_six_goals",
+    "type": "MULTIPLE_CHOICE",
+    "category": "İstatistikler ve rekorlar",
+    "text": "1992-1993 sezonunda tek bir Süper Lig maçında 6 gol atarak rekor kıran forvet kimdir?",
+    "metadata": {
+      "options": ["Tanju Çolak", "Metin Oktay", "Şota Arveladze", "Feyyaz Uçar"]
+    },
+    "correctAnswer": "Tanju Çolak"
+  },
+  {
+    "code": "q_big_four_player_sergen",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Türkiye'de 'Dört Büyükler'in (BJK, FB, GS, TS) dördünde de forma giyen ilk futbolcu kimdir?",
+    "metadata": {
+      "options": ["Burak Yılmaz", "Sergen Yalçın", "Tugay Kerimoğlu", "Oktay Derelioğlu"]
+    },
+    "correctAnswer": "Sergen Yalçın"
+  },
+  {
+    "code": "q_hagi_nickname",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Galatasaray efsanesi Gheorghe Hagi hangi lakapla tanınmaktadır?",
+    "metadata": {
+      "options": ["Karpatların Maradonası", "Balkan Kartalı", "Taçsız Kral", "Komutan"]
+    },
+    "correctAnswer": "Karpatların Maradonası"
+  },
+  {
+    "code": "q_alex_de_souza_number",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Fenerbahçe efsanesi Alex de Souza'nın sarı-lacivertli takımda giydiği ikonik forma numarası kaçtır?",
+    "metadata": {
+      "options": ["8", "10", "11", "20"]
+    },
+    "correctAnswer": "10"
+  },
+  {
+    "code": "q_metin_oktay_nickname",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Ağları delen efsanevi golcü Metin Oktay hangi lakapla anılmaktadır?",
+    "metadata": {
+      "options": ["Sarı Fırtına", "Taçsız Kral", "Uçan Hollandalı", "Kral"]
+    },
+    "correctAnswer": "Taçsız Kral"
+  },
+  {
+    "code": "q_camp_nou_club",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Avrupa'nın en büyük stadyumlarından biri olan Camp Nou hangi kulübün mabedidir?",
+    "metadata": {
+      "options": ["Real Madrid", "Barcelona", "Atletico Madrid", "Valencia"]
+    },
+    "correctAnswer": "Barcelona"
+  },
+  {
+    "code": "q_santiago_bernabeu_club",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Santiago Bernabéu stadyumu hangi kulübün ev sahipliğini yapmaktadır?",
+    "metadata": {
+      "options": ["Real Madrid", "Espanyol", "Sevilla", "Athletic Bilbao"]
+    },
+    "correctAnswer": "Real Madrid"
+  },
+  {
+    "code": "q_san_siro_shared_clubs",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "İtalya'da San Siro (Giuseppe Meazza) stadyumunu ortaklaşa kullanan iki ezeli rakip hangileridir?",
+    "metadata": {
+      "options": ["Juventus - Torino", "Roma - Lazio", "AC Milan - Inter", "Genoa - Sampdoria"]
+    },
+    "correctAnswer": "AC Milan - Inter"
+  },
+  {
+    "code": "q_anfield_anthem",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Anfield stadyumunda Liverpool taraftarlarının söylediği dünyaca ünlü marş hangisidir?",
+    "metadata": {
+      "options": ["Glory Glory", "Blue Moon", "You'll Never Walk Alone", "Forever Blowing Bubbles"]
+    },
+    "correctAnswer": "You'll Never Walk Alone"
+  },
+  {
+    "code": "q_old_trafford_nickname",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Sir Bobby Charlton'ın Manchester United'ın stadı Old Trafford için taktığı ünlü lakap nedir?",
+    "metadata": {
+      "options": ["Kırmızı Kale", "Düşler Tiyatrosu (Theatre of Dreams)", "Futbol Mabedi", "Aslan İni"]
+    },
+    "correctAnswer": "Düşler Tiyatrosu (Theatre of Dreams)"
+  },
+  {
+    "code": "q_dortmund_yellow_wall",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Borussia Dortmund stadyumundaki ünlü güney tribününe ne ad verilir?",
+    "metadata": {
+      "options": ["Sarı Duvar (Gelbe Wand)", "Kara Orman", "Kırmızı Şeytanlar", "Ruhr Cephesi"]
+    },
+    "correctAnswer": "Sarı Duvar (Gelbe Wand)"
+  },
+  {
+    "code": "q_boca_river_derby_name",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Arjantin'in Boca Juniors ve River Plate kulüpleri arasındaki tarihi derbiye ne ad verilir?",
+    "metadata": {
+      "options": ["El Clasico", "Superclasico", "Derby della Madonnina", "Fla-Flu"]
+    },
+    "correctAnswer": "Superclasico"
+  },
+  {
+    "code": "q_cr7_first_pro_club",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Cristiano Ronaldo profesyonel kariyerine hangi Portekiz kulübünün altyapısında başlamıştır?",
+    "metadata": {
+      "options": ["Porto", "Benfica", "Sporting CP", "Braga"]
+    },
+    "correctAnswer": "Sporting CP"
+  },
+  {
+    "code": "q_arda_guler_real_madrid_transfer",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Genç yıldız Arda Güler, 2023 yazında Real Madrid'e hangi Türk kulübünden transfer olmuştur?",
+    "metadata": {
+      "options": ["Galatasaray", "Fenerbahçe", "Gençlerbirliği", "Beşiktaş"]
+    },
+    "correctAnswer": "Fenerbahçe"
+  },
+  {
+    "code": "q_copa_america_most_titles",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Turnuvalar",
+    "text": "Copa America tarihinin 16 şampiyonlukla en başarılı ülkesi hangisidir?",
+    "metadata": {
+      "options": ["Brezilya", "Uruguay", "Arjantin", "Şili"]
+    },
+    "correctAnswer": "Arjantin"
+  },
+  {
+    "code": "q_afcon_most_titles_egypt",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Turnuvalar",
+    "text": "Afrika Uluslar Kupası'nı 7 kez ile en çok kazanan ülke hangisidir?",
+    "metadata": {
+      "options": ["Kamerun", "Nijerya", "Mısır", "Gana"]
+    },
+    "correctAnswer": "Mısır"
+  },
+  {
+    "code": "q_asian_cup_most_titles_japan",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Turnuvalar",
+    "text": "Asya Kupası'nı 4 şampiyonlukla en çok kazanan milli takım hangisidir?",
+    "metadata": {
+      "options": ["Güney Kore", "İran", "Suudi Arabistan", "Japonya"]
+    },
+    "correctAnswer": "Japonya"
+  },
+  {
+    "code": "q_euro_2016_final_scorer",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Tarihî futbol olayları",
+    "text": "EURO 2016 finalinde Portekiz'e Fransa karşısında uzatmalarda kupayı getiren golü kim atmıştır?",
+    "metadata": {
+      "options": ["Cristiano Ronaldo", "Nani", "Eder", "Ricardo Quaresma"]
+    },
+    "correctAnswer": "Eder"
+  },
+  {
+    "code": "q_euro_2020_champion",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Turnuvalar",
+    "text": "Pandemi nedeniyle 2021'de oynanan EURO 2020 finalinde İngiltere'yi penaltılarla yenen şampiyon kimdir?",
+    "metadata": {
+      "options": ["İtalya", "Fransa", "Belçika", "İspanya"]
+    },
+    "correctAnswer": "İtalya"
+  },
+  {
+    "code": "q_euro_2024_champion",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Turnuvalar",
+    "text": "Almanya'da düzenlenen EURO 2024 finalinde İngiltere'yi 2-1 mağlup eden şampiyon kimdir?",
+    "metadata": {
+      "options": ["Almanya", "Fransa", "İspanya", "Hollanda"]
+    },
+    "correctAnswer": "İspanya"
+  },
+  {
+    "code": "q_premier_league_founding_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Turnuvalar",
+    "text": "İngiltere Premier Ligi mevcut formatıyla hangi yılda kurulmuştur?",
+    "metadata": {
+      "options": ["1988", "1990", "1992", "1994"]
+    },
+    "correctAnswer": "1992"
+  },
+  {
+    "code": "q_fifa_founding_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Tarihî futbol olayları",
+    "text": "Dünya futbolunun yönetim organı FIFA hangi yılda Paris'te kurulmuştur?",
+    "metadata": {
+      "options": ["1896", "1904", "1912", "1923"]
+    },
+    "correctAnswer": "1904"
+  },
+  {
+    "code": "q_uefa_founding_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Tarihî futbol olayları",
+    "text": "Avrupa futbol federasyonu UEFA hangi yılda kurulmuştur?",
+    "metadata": {
+      "options": ["1948", "1954", "1960", "1966"]
+    },
+    "correctAnswer": "1954"
+  },
+  {
+    "code": "q_tff_founding_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Milli takımlar",
+    "text": "Türkiye Futbol Federasyonu (TFF) hangi yılda kurulmuştur?",
+    "metadata": {
+      "options": ["1920", "1923", "1927", "1930"]
+    },
+    "correctAnswer": "1923"
+  },
+  {
+    "code": "q_turkey_first_national_match",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Milli takımlar",
+    "text": "Türkiye A Milli Futbol Takımı tarihindeki ilk resmi maçını hangi ülkeye karşı oynamıştır?",
+    "metadata": {
+      "options": ["Romanya", "Yunanistan", "Bulgaristan", "Macaristan"]
+    },
+    "correctAnswer": "Romanya"
+  },
+  {
+    "code": "q_miracle_of_bern_1954",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Tarihî futbol olayları",
+    "text": "1954 Dünya Kupası'nda 'Bern Mucizesi' olarak bilinen finalde Batı Almanya hangi efsane takımı 3-2 yenmiştir?",
+    "metadata": {
+      "options": ["Brezilya", "Uruguay", "Macaristan", "İngiltere"]
+    },
+    "correctAnswer": "Macaristan"
+  },
+  {
+    "code": "q_brazil_1958_final_host",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Turnuvalar",
+    "text": "Pelé'nin 17 yaşında parladığı 1958 Dünya Kupası hangi ülkede düzenlenmiştir?",
+    "metadata": {
+      "options": ["İsveç", "Şili", "İsviçre", "İngiltere"]
+    },
+    "correctAnswer": "İsveç"
+  },
+  {
+    "code": "q_england_1966_wc_final",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Turnuvalar",
+    "text": "İngiltere tarihindeki tek Dünya Kupası şampiyonluğunu hangi yılda kendi evinde kazanmıştır?",
+    "metadata": {
+      "options": ["1958", "1962", "1966", "1970"]
+    },
+    "correctAnswer": "1966"
+  },
+  {
+    "code": "q_maracana_disaster_1950",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Tarihî futbol olayları",
+    "text": "1950 Dünya Kupası'nda Maracana'da Brezilya'yı 2-1 yenerek kupayı kazanan ve 'Maracanazo' faciasına sebep olan ülke hangisidir?",
+    "metadata": {
+      "options": ["Arjantin", "Uruguay", "Şili", "Paraguay"]
+    },
+    "correctAnswer": "Uruguay"
+  },
+  {
+    "code": "q_iniesta_2010_wc_goal",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Tarihî futbol olayları",
+    "text": "2010 Dünya Kupası finalinde İspanya'ya Hollanda karşısında 116. dakikada kupayı getiren golü kim atmıştır?",
+    "metadata": {
+      "options": ["Xavi", "David Villa", "Andres Iniesta", "Fernando Torres"]
+    },
+    "correctAnswer": "Andres Iniesta"
+  },
+  {
+    "code": "q_gotze_2014_wc_goal",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Tarihî futbol olayları",
+    "text": "2014 Dünya Kupası finalinde Almanya'ya Arjantin karşısında uzatmalarda şampiyonluğu getiren golü kim atmıştır?",
+    "metadata": {
+      "options": ["Thomas Müller", "Mario Götze", "Miroslav Klose", "Toni Kroos"]
+    },
+    "correctAnswer": "Mario Götze"
+  },
+  {
+    "code": "q_ronaldo_nazario_ballondor",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Brezilyalı efsane 'Fenomen' Ronaldo kariyerinde kaç kez Ballon d'Or kazanmıştır?",
+    "metadata": {
+      "options": ["1", "2", "3", "4"]
+    },
+    "correctAnswer": "2"
+  },
+  {
+    "code": "q_van_basten_ballondor",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Hollandalı efsane golcü Marco van Basten kariyerinde kaç kez Ballon d'Or ödülü kazanmıştır?",
+    "metadata": {
+      "options": ["2", "3", "4", "5"]
+    },
+    "correctAnswer": "3"
+  },
+  {
+    "code": "q_cruyff_ballondor",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "'Total Futbol'un öncüsü Johan Cruyff kariyerinde kaç kez Ballon d'Or kazanmıştır?",
+    "metadata": {
+      "options": ["1", "2", "3", "4"]
+    },
+    "correctAnswer": "3"
+  },
+  {
+    "code": "q_platini_ballondor",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "1983, 1984 ve 1985 yıllarında üst üste 3 kez Ballon d'Or kazanan Fransız futbol adamı kimdir?",
+    "metadata": {
+      "options": ["Zinedine Zidane", "Raymond Kopa", "Michel Platini", "Jean Tigana"]
+    },
+    "correctAnswer": "Michel Platini"
+  },
+  {
+    "code": "q_neymar_psg_transfer_fee",
+    "type": "MULTIPLE_CHOICE",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Neymar 2017 yılında Barcelona'dan PSG'ye kaç milyon Euro'luk rekor serbest kalma bedeliyle transfer olmuştur?",
+    "metadata": {
+      "options": ["180 Milyon €", "200 Milyon €", "222 Milyon €", "250 Milyon €"]
+    },
+    "correctAnswer": "222 Milyon €"
+  },
+  {
+    "code": "q_lewandowski_five_goals_minutes",
+    "type": "MULTIPLE_CHOICE",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Robert Lewandowski, Wolfsburg maçında oyuna sonradan girip 5 golü kaç dakika içinde atarak rekor kırmıştır?",
+    "metadata": {
+      "options": ["7 dakika", "9 dakika", "12 dakika", "15 dakika"]
+    },
+    "correctAnswer": "9 dakika"
+  },
+  {
+    "code": "q_ronaldo_ucl_all_time_scorer",
+    "type": "MULTIPLE_CHOICE",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Şampiyonlar Ligi tarihinin tüm zamanların en çok gol atan oyuncusu kimdir?",
+    "metadata": {
+      "options": ["Lionel Messi", "Cristiano Ronaldo", "Robert Lewandowski", "Karim Benzema"]
+    },
+    "correctAnswer": "Cristiano Ronaldo"
+  },
+  {
+    "code": "q_messi_single_year_goals",
+    "type": "MULTIPLE_CHOICE",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Lionel Messi, 2012 takvim yılında toplam kaç resmi gol atarak Gerd Müller'in rekorunu kırmıştır?",
+    "metadata": {
+      "options": ["85", "88", "91", "95"]
+    },
+    "correctAnswer": "91"
+  },
+  {
+    "code": "q_ajax_three_peat_ucl",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "1971, 1972 ve 1973 yıllarında üst üste 3 kez Şampiyon Kulüpler Kupası kazanan Hollanda devi hangisidir?",
+    "metadata": {
+      "options": ["Feyenoord", "PSV Eindhoven", "Ajax", "AZ Alkmaar"]
+    },
+    "correctAnswer": "Ajax"
+  },
+  {
+    "code": "q_bayern_three_peat_ucl",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "1974, 1975 ve 1976 yıllarında Franz Beckenbauer önderliğinde üst üste 3 kez Avrupa şampiyonu olan kulüp hangisidir?",
+    "metadata": {
+      "options": ["Borussia Mönchengladbach", "Hamburg", "Bayern Münih", "Köln"]
+    },
+    "correctAnswer": "Bayern Münih"
+  },
+  {
+    "code": "q_real_madrid_five_peat_ucl",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "1956-1960 yılları arasında turnuvanın ilk 5 sezonunda üst üste 5 kez şampiyon olan kulüp hangisidir?",
+    "metadata": {
+      "options": ["Benfica", "Real Madrid", "Reims", "Milan"]
+    },
+    "correctAnswer": "Real Madrid"
+  },
+  {
+    "code": "q_trabzonspor_first_champion",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Trabzonspor, Anadolu'dan çıkan ilk şampiyon unvanını hangi sezonda kazanmıştır?",
+    "metadata": {
+      "options": ["1973-1974", "1975-1976", "1978-1979", "1980-1981"]
+    },
+    "correctAnswer": "1975-1976"
+  },
+  {
+    "code": "q_bursaspor_championship_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "Bursaspor'un Ertuğrul Sağlam yönetiminde tarihi Süper Lig şampiyonluğu yaşadığı sezon hangisidir?",
+    "metadata": {
+      "options": ["2007-2008", "2008-2009", "2009-2010", "2010-2011"]
+    },
+    "correctAnswer": "2009-2010"
+  },
+  {
+    "code": "q_basaksehir_championship_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Kulüpler",
+    "text": "İstanbul Başakşehir FK, Okan Buruk yönetiminde Süper Lig şampiyonluğunu hangi sezonda kazanmıştır?",
+    "metadata": {
+      "options": ["2018-2019", "2019-2020", "2020-2021", "2021-2022"]
+    },
+    "correctAnswer": "2019-2020"
+  },
+  {
+    "code": "q_drogba_chelsea_ucl_penalty",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "2012 Şampiyonlar Ligi finalinde Chelsea'ye kupayı getiren son penaltıyı hangi Fildişili yıldız atmıştır?",
+    "metadata": {
+      "options": ["Didier Drogba", "Salomon Kalou", "Yaya Toure", "Michael Essien"]
+    },
+    "correctAnswer": "Didier Drogba"
+  },
+  {
+    "code": "q_ronaldinho_standing_ovation",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Tarihî futbol olayları",
+    "text": "2005 yılında Santiago Bernabeu'da Real Madrid taraftarlarının ayakta alkışladığı Barcelona yıldızı kimdir?",
+    "metadata": {
+      "options": ["Lionel Messi", "Ronaldinho", "Samuel Eto'o", "Deco"]
+    },
+    "correctAnswer": "Ronaldinho"
+  },
+  {
+    "code": "q_beckham_free_kick_greece",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Tarihî futbol olayları",
+    "text": "David Beckham 2001 yılında 93. dakikada frikikten Yunanistan'a gol atarak İngiltere'yi hangi turnuvaya taşımıştır?",
+    "metadata": {
+      "options": ["EURO 2000", "2002 Dünya Kupası", "EURO 2004", "2006 Dünya Kupası"]
+    },
+    "correctAnswer": "2002 Dünya Kupası"
+  },
+  {
+    "code": "q_buffon_world_cup_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Efsane İtalyan kaleci Gianluigi Buffon, Dünya Kupası şampiyonluğunu hangi yılda yaşamıştır?",
+    "metadata": {
+      "options": ["1998", "2002", "2006", "2010"]
+    },
+    "correctAnswer": "2006"
+  },
+  {
+    "code": "q_casillas_world_cup_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "İspanya kaptanı Iker Casillas, Dünya Kupası şampiyonluğunu hangi yılda kaldırmıştır?",
+    "metadata": {
+      "options": ["2008", "2010", "2012", "2014"]
+    },
+    "correctAnswer": "2010"
+  },
+  {
+    "code": "q_lahm_world_cup_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Almanya kaptanı Philipp Lahm, Dünya Kupası zaferini hangi yılda Maracana'da yaşamıştır?",
+    "metadata": {
+      "options": ["2006", "2010", "2014", "2018"]
+    },
+    "correctAnswer": "2014"
+  },
+  {
+    "code": "q_lloris_world_cup_year",
+    "type": "MULTIPLE_CHOICE",
+    "category": "Futbolcular",
+    "text": "Fransa kaptanı Hugo Lloris, Dünya Kupası kupasını hangi yılda Moskova'da kaldırmıştır?",
+    "metadata": {
+      "options": ["2014", "2016", "2018", "2022"]
+    },
+    "correctAnswer": "2018"
+  },
+  {
+    "code": "q_est_ronaldo_rm_goals",
+    "type": "ESTIMATION",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Cristiano Ronaldo, Real Madrid formasıyla çıktığı 438 resmi maçta toplam kaç gol atmıştır?",
+    "metadata": {
+      "min": 200,
+      "max": 600
+    },
+    "correctAnswer": 450
+  },
+  {
+    "code": "q_est_messi_barca_goals",
+    "type": "ESTIMATION",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Lionel Messi, FC Barcelona A takımı formasıyla tüm resmi müsabakalarda toplam kaç gol atmıştır?",
+    "metadata": {
+      "min": 400,
+      "max": 900
+    },
+    "correctAnswer": 672
+  },
+  {
+    "code": "q_est_pele_brazil_goals",
+    "type": "ESTIMATION",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Pelé, Brezilya Milli Takımı formasıyla çıktığı resmi maçlarda toplam kaç gol atmıştır?",
+    "metadata": {
+      "min": 50,
+      "max": 120
+    },
+    "correctAnswer": 77
+  },
+  {
+    "code": "q_est_lewandowski_single_season",
+    "type": "ESTIMATION",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Robert Lewandowski 2020-2021 sezonunda Bundesliga'da kaç gol atarak Gerd Müller'in tek sezon rekorunu kırmıştır?",
+    "metadata": {
+      "min": 25,
+      "max": 60
+    },
+    "correctAnswer": 41
+  },
+  {
+    "code": "q_est_sadio_mane_hattrick_seconds",
+    "type": "ESTIMATION",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Sadio Mane'nin Southampton formasıyla Premier Lig tarihinin en hızlı hat-trick'ini yaptığı süre kaç saniyedir?",
+    "metadata": {
+      "min": 60,
+      "max": 360
+    },
+    "correctAnswer": 176
+  },
+  {
+    "code": "q_est_world_cup_2026_teams",
+    "type": "ESTIMATION",
+    "category": "Turnuvalar",
+    "text": "2026 FIFA Dünya Kupası'nda ilk kez kaç ülke mücadele edecektir?",
+    "metadata": {
+      "min": 24,
+      "max": 64
+    },
+    "correctAnswer": 48
+  },
+  {
+    "code": "q_est_cr7_ucl_total_goals",
+    "type": "ESTIMATION",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Cristiano Ronaldo UEFA Şampiyonlar Ligi kariyerinde toplam kaç gol atmıştır?",
+    "metadata": {
+      "min": 100,
+      "max": 180
+    },
+    "correctAnswer": 140
+  },
+  {
+    "code": "q_est_messi_ucl_total_goals",
+    "type": "ESTIMATION",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Lionel Messi UEFA Şampiyonlar Ligi kariyerinde toplam kaç gol atmıştır?",
+    "metadata": {
+      "min": 90,
+      "max": 160
+    },
+    "correctAnswer": 129
+  },
+  {
+    "code": "q_est_hakan_sukur_super_lig_goals",
+    "type": "ESTIMATION",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Hakan Şükür'ün Süper Lig tarihinde kaydettiği toplam gol sayısı kaçtır?",
+    "metadata": {
+      "min": 180,
+      "max": 300
+    },
+    "correctAnswer": 249
+  },
+  {
+    "code": "q_est_tanju_colak_golden_boot",
+    "type": "ESTIMATION",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Tanju Çolak 1987-1988 sezonunda kaç gol atarak Avrupa Altın Ayakkabı ödülünü kazanmıştır?",
+    "metadata": {
+      "min": 25,
+      "max": 50
+    },
+    "correctAnswer": 39
+  },
+  {
+    "code": "q_est_alex_fenerbahce_goals",
+    "type": "ESTIMATION",
+    "category": "Futbolcular",
+    "text": "Alex de Souza, Fenerbahçe formasıyla Süper Lig'de toplam kaç gol kaydetmiştir?",
+    "metadata": {
+      "min": 80,
+      "max": 200
+    },
+    "correctAnswer": 136
+  },
+  {
+    "code": "q_est_camp_nou_capacity_thousands",
+    "type": "ESTIMATION",
+    "category": "Kulüpler",
+    "text": "Yenileme öncesi Camp Nou stadyumunun resmi seyirci kapasitesi yaklaşık kaç bindi (bin cinsinden)?",
+    "metadata": {
+      "min": 60,
+      "max": 130
+    },
+    "correctAnswer": 99
+  },
+  {
+    "code": "q_est_wembley_capacity_thousands",
+    "type": "ESTIMATION",
+    "category": "Turnuvalar",
+    "text": "Londra'daki tarihi Wembley Stadyumu'nun oturma kapasitesi kaç bindir (bin cinsinden)?",
+    "metadata": {
+      "min": 50,
+      "max": 120
+    },
+    "correctAnswer": 90
+  },
+  {
+    "code": "q_est_brazil_wc_1970_goals",
+    "type": "ESTIMATION",
+    "category": "Milli takımlar",
+    "text": "Efsanevi 1970 Dünya Kupası şampiyonu Brezilya turnuva boyunca 6 maçta toplam kaç gol atmıştır?",
+    "metadata": {
+      "min": 10,
+      "max": 30
+    },
+    "correctAnswer": 19
+  },
+  {
+    "code": "q_est_premier_league_games_season",
+    "type": "ESTIMATION",
+    "category": "Turnuvalar",
+    "text": "20 takımlı Premier Lig'de bir takım bir sezonda toplam kaç lig maçı oynar?",
+    "metadata": {
+      "min": 25,
+      "max": 50
+    },
+    "correctAnswer": 38
+  },
+  {
+    "code": "q_rank_world_cup_titles",
+    "type": "RANKING",
+    "category": "Turnuvalar",
+    "text": "Aşağıdaki milli takımları kazandıkları Dünya Kupası sayısına göre ÇOKTAN AZA doğru sıralayın.",
+    "metadata": {
+      "items": ["Brezilya", "İtalya", "Arjantin", "Fransa"]
+    },
+    "correctAnswer": ["Brezilya", "İtalya", "Arjantin", "Fransa"]
+  },
+  {
+    "code": "q_rank_ucl_titles",
+    "type": "RANKING",
+    "category": "Kulüpler",
+    "text": "Aşağıdaki kulüpleri kazandıkları Şampiyonlar Ligi şampiyonluk sayısına göre ÇOKTAN AZA sıralayın.",
+    "metadata": {
+      "items": ["Real Madrid", "AC Milan", "Liverpool", "Barcelona"]
+    },
+    "correctAnswer": ["Real Madrid", "AC Milan", "Liverpool", "Barcelona"]
+  },
+  {
+    "code": "q_rank_ballon_dor_winners",
+    "type": "RANKING",
+    "category": "Futbolcular",
+    "text": "Aşağıdaki efsaneleri kazandıkları Ballon d'Or ödülü sayısına göre ÇOKTAN AZA sıralayın.",
+    "metadata": {
+      "items": ["Lionel Messi", "Cristiano Ronaldo", "Michel Platini", "Ronaldo Nazario"]
+    },
+    "correctAnswer": ["Lionel Messi", "Cristiano Ronaldo", "Michel Platini", "Ronaldo Nazario"]
+  },
+  {
+    "code": "q_rank_super_lig_titles",
+    "type": "RANKING",
+    "category": "Kulüpler",
+    "text": "Aşağıdaki Türk kulüplerini Süper Lig şampiyonluk sayılarına göre ÇOKTAN AZA sıralayın.",
+    "metadata": {
+      "items": ["Galatasaray", "Fenerbahçe", "Beşiktaş", "Trabzonspor"]
+    },
+    "correctAnswer": ["Galatasaray", "Fenerbahçe", "Beşiktaş", "Trabzonspor"]
+  },
+  {
+    "code": "q_rank_pl_titles_since_1992",
+    "type": "RANKING",
+    "category": "Kulüpler",
+    "text": "1992'den bu yana Premier Lig şampiyonluk sayılarına göre kulüpleri ÇOKTAN AZA sıralayın.",
+    "metadata": {
+      "items": ["Manchester United", "Manchester City", "Chelsea", "Arsenal"]
+    },
+    "correctAnswer": ["Manchester United", "Manchester City", "Chelsea", "Arsenal"]
+  },
+  {
+    "code": "q_rank_wc_all_time_scorers",
+    "type": "RANKING",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Dünya Kupası tarihindeki gol krallarını toplam gol sayılarına göre ÇOKTAN AZA sıralayın.",
+    "metadata": {
+      "items": ["Miroslav Klose", "Ronaldo Nazario", "Gerd Müller", "Just Fontaine"]
+    },
+    "correctAnswer": ["Miroslav Klose", "Ronaldo Nazario", "Gerd Müller", "Just Fontaine"]
+  },
+  {
+    "code": "q_rank_expensive_transfers",
+    "type": "RANKING",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Aşağıdaki futbol transferlerini bonservis bedellerine göre EN PAHALIDAN EN UCUZA sıralayın.",
+    "metadata": {
+      "items": ["Neymar (PSG)", "Kylian Mbappe (PSG)", "Philippe Coutinho (Barcelona)", "Jack Grealish (Man City)"]
+    },
+    "correctAnswer": ["Neymar (PSG)", "Kylian Mbappe (PSG)", "Philippe Coutinho (Barcelona)", "Jack Grealish (Man City)"]
+  },
+  {
+    "code": "q_rank_copa_america_titles",
+    "type": "RANKING",
+    "category": "Turnuvalar",
+    "text": "Aşağıdaki ülkeleri kazandıkları Copa America kupa sayısına göre ÇOKTAN AZA sıralayın.",
+    "metadata": {
+      "items": ["Arjantin", "Uruguay", "Brezilya", "Şili"]
+    },
+    "correctAnswer": ["Arjantin", "Uruguay", "Brezilya", "Şili"]
+  },
+  {
+    "code": "q_rank_afcon_titles",
+    "type": "RANKING",
+    "category": "Turnuvalar",
+    "text": "Aşağıdaki ülkeleri kazandıkları Afrika Uluslar Kupası sayısına göre ÇOKTAN AZA sıralayın.",
+    "metadata": {
+      "items": ["Mısır", "Kamerun", "Gana", "Nijerya"]
+    },
+    "correctAnswer": ["Mısır", "Kamerun", "Gana", "Nijerya"]
+  },
+  {
+    "code": "q_rank_ucl_all_time_appearances",
+    "type": "RANKING",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Şampiyonlar Ligi'nde en çok maça çıkan oyuncuları maç sayılarına göre ÇOKTAN AZA sıralayın.",
+    "metadata": {
+      "items": ["Cristiano Ronaldo", "Iker Casillas", "Lionel Messi", "Karim Benzema"]
+    },
+    "correctAnswer": ["Cristiano Ronaldo", "Iker Casillas", "Lionel Messi", "Karim Benzema"]
+  },
+  {
+    "code": "q_rank_european_golden_shoe_multi",
+    "type": "RANKING",
+    "category": "Futbolcular",
+    "text": "Avrupa Altın Ayakkabı ödülü kazanma sayılarına göre oyuncuları ÇOKTAN AZA sıralayın.",
+    "metadata": {
+      "items": ["Lionel Messi (6)", "Cristiano Ronaldo (4)", "Eusebio (2)", "Francesco Totti (1)"]
+    },
+    "correctAnswer": ["Lionel Messi (6)", "Cristiano Ronaldo (4)", "Eusebio (2)", "Francesco Totti (1)"]
+  },
+  {
+    "code": "q_rank_turkey_super_lig_goals_legends",
+    "type": "RANKING",
+    "category": "İstatistikler ve rekorlar",
+    "text": "Süper Lig tarihinin efsane golcülerini toplam lig gollerine göre ÇOKTAN AZA sıralayın.",
+    "metadata": {
+      "items": ["Hakan Şükür", "Tanju Çolak", "Hami Mandıralı", "Aykut Kocaman"]
+    },
+    "correctAnswer": ["Hakan Şükür", "Tanju Çolak", "Hami Mandıralı", "Aykut Kocaman"]
+  },
+  {
+    "code": "q_rank_world_cup_year_order",
+    "type": "RANKING",
+    "category": "Tarihî futbol olayları",
+    "text": "Aşağıdaki Dünya Kupası finallerini OYNANDIĞI YILA GÖRE ESKİDEN YENİYE doğru sıralayın.",
+    "metadata": {
+      "items": ["Bern Mucizesi (1954)", "İngiltere Zaferi (1966)", "Maradona Eli (1986)", "Zidane Baş Kaldırışı (1998)"]
+    },
+    "correctAnswer": ["Bern Mucizesi (1954)", "İngiltere Zaferi (1966)", "Maradona Eli (1986)", "Zidane Baş Kaldırışı (1998)"]
+  },
+  {
+    "code": "q_rank_ballon_dor_chronological",
+    "type": "RANKING",
+    "category": "Futbolcular",
+    "text": "Aşağıdaki yıldızların ilk Ballon d'Or kazandıkları yılları ESKİDEN YENİYE sıralayın.",
+    "metadata": {
+      "items": ["Ronaldo Nazario (1997)", "Ronaldinho (2005)", "Kaka (2007)", "Cristiano Ronaldo (2008)"]
+    },
+    "correctAnswer": ["Ronaldo Nazario (1997)", "Ronaldinho (2005)", "Kaka (2007)", "Cristiano Ronaldo (2008)"]
+  },
+  {
+    "code": "q_rank_turkish_clubs_founding",
+    "type": "RANKING",
+    "category": "Kulüpler",
+    "text": "Aşağıdaki Türk kulüplerini KURULUŞ YILLARINA GÖRE ESKİDEN YENİYE doğru sıralayın.",
+    "metadata": {
+      "items": ["Beşiktaş (1903)", "Galatasaray (1905)", "Fenerbahçe (1907)", "Trabzonspor (1967)"]
+    },
+    "correctAnswer": ["Beşiktaş (1903)", "Galatasaray (1905)", "Fenerbahçe (1907)", "Trabzonspor (1967)"]
+  }
+]

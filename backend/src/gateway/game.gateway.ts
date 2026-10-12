@@ -55,11 +55,11 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     }
   }
 
-  handleDisconnect(client: Socket) {
+  async handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
     const userId = this.clientMapping.get(client.id);
     if (userId) {
-      // Kuyruktan çıkartma işlemleri vs yapılabilir
+      await this.matchmakingService.handleUserDisconnect(userId);
       this.clientMapping.delete(client.id);
     }
   }
@@ -84,12 +84,15 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   }
 
   @SubscribeMessage('join_room')
-  handleJoinRoom(
+  async handleJoinRoom(
     @MessageBody() data: { roomId: string },
     @ConnectedSocket() client: Socket,
   ) {
     // Client'ı Socket.io odasına al (Böylece server.to(roomId) çalışır)
     client.join(data.roomId);
+    if (data.roomId) {
+      await this.gamesService.updateMatchActivity(data.roomId);
+    }
   }
 
   @SubscribeMessage('leave_matchmaking')

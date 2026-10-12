@@ -23,6 +23,7 @@ model User {
   profile          PlayerProfile?
   coinTransactions CoinTransaction[]
   matchPlayers     MatchPlayer[]
+  matchHolds       MatchHold[]
 }
 
 model PlayerProfile {
@@ -40,19 +41,37 @@ model PlayerProfile {
   updatedAt  DateTime @updatedAt
 }
 
+model MatchHold {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  matchId     String?
+  match       Match?    @relation(fields: [matchId], references: [id])
+  gameModeId  String?
+  amount      Int
+  status      String    @default("HELD") // HELD, REFUNDED, SETTLED
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  refundedAt  DateTime?
+  settledAt   DateTime?
+
+  @@index([userId, status])
+  @@index([matchId, status])
+}
+
 model CoinTransaction {
   id            String   @id @default(uuid())
   userId        String
   user          User     @relation(fields: [userId], references: [id])
   amount        Int      // Pozitif veya negatif olabilir
   type          String   // GAME_REWARD, DAILY_REWARD, SHOP_PURCHASE vs.
-  referenceId   String   // Idempotency için, örn: matchId
+  referenceId   String   // Idempotency için, örn: matchId veya holdId
   balanceBefore Int
   balanceAfter  Int
   createdAt     DateTime @default(now())
 
-  // Aynı maça 2 kez ödül verilmesini engeller (Anti-cheat & Double Reward)
-  @@unique([type, referenceId])
+  // Kullanıcı, işlem türü ve referans ID kombinasyonu benzersiz olmalıdır (Çoklu oyuncu ledger desteği)
+  @@unique([userId, type, referenceId])
 }
 
 model GameMode {
@@ -116,6 +135,7 @@ model Match {
 
   players    MatchPlayer[]
   questions  MatchQuestion[]
+  holds      MatchHold[]
 }
 
 model MatchPlayer {

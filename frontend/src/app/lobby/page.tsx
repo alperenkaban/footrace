@@ -11,6 +11,7 @@ export default function LobbyPage() {
   const router = useRouter();
   const { socket, socketState } = useSocket();
   
+  const [selectedMode, setSelectedMode] = useState<'quick_2' | 'classic_10'>('classic_10');
   const [matchStatus, setMatchStatus] = useState<string | null>(null);
   // BUG FIX: prevent double-click sending duplicate matchmaking requests
   const isJoiningRef = useRef(false);
@@ -80,19 +81,25 @@ export default function LobbyPage() {
     logout();
   };
 
-  const handleQuickJoin = () => {
-    console.log('[LOBBY] handleQuickJoin clicked. Socket:', socket ? 'exists' : 'null', 'connected:', socket?.connected, 'socketState:', socketState);
-    // BUG FIX: prevent double-click sending multiple matchmaking requests
+  const handleJoin = (modeId: 'quick_2' | 'classic_10') => {
+    console.log('[LOBBY] handleJoin clicked:', modeId);
     if (isJoiningRef.current) {
       console.log('[LOBBY] Already joining, ignoring click');
       return;
     }
     if (socket && socket.connected) {
       isJoiningRef.current = true;
-      console.log('[LOBBY] Emitting join_matchmaking');
-      socket.emit('join_matchmaking', { gameModeId: 'quick_2' });
+      socket.emit('join_matchmaking', { gameModeId: modeId });
     } else {
       alert(`Socket bağlı değil! Durum: ${socketState}. Sayfayı yenileyin.`);
+    }
+  };
+
+  const handleCancelMatchmaking = () => {
+    if (socket && socket.connected) {
+      socket.emit('leave_matchmaking', { gameModeId: selectedMode });
+      isJoiningRef.current = false;
+      setMatchStatus(null);
     }
   };
 
@@ -117,7 +124,7 @@ export default function LobbyPage() {
       </div>
 
       {/* PROFILE CARD */}
-      <div className="w-full max-w-sm bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 flex flex-col items-center shadow-2xl mb-8">
+      <div className="w-full max-w-sm bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 flex flex-col items-center shadow-2xl mb-6">
         <div className="w-24 h-24 bg-gradient-to-tr from-emerald-500 to-cyan-500 rounded-full mb-4 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.3)]">
           <span className="text-4xl font-bold text-white">{user.displayName.charAt(0).toUpperCase()}</span>
         </div>
@@ -144,28 +151,77 @@ export default function LobbyPage() {
         </div>
       </div>
 
+      {/* GAME MODE SELECTION TABS */}
+      <div className="w-full max-w-sm mb-4">
+        <div className="grid grid-cols-2 gap-2 p-1.5 bg-black/40 rounded-2xl border border-white/10">
+          <button
+            onClick={() => setSelectedMode('classic_10')}
+            className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-1 ${
+              selectedMode === 'classic_10'
+                ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-md'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <div className="flex items-center gap-1">
+              <Trophy size={14} />
+              <span>10 Kişilik Turnuva</span>
+            </div>
+            <span className="text-[10px] opacity-80 font-normal">10 Soru • 900 Ödül</span>
+          </button>
+
+          <button
+            onClick={() => setSelectedMode('quick_2')}
+            className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-1 ${
+              selectedMode === 'quick_2'
+                ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-md'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <div className="flex items-center gap-1">
+              <Zap size={14} />
+              <span>2 Kişilik Hızlı</span>
+            </div>
+            <span className="text-[10px] opacity-80 font-normal">3 Soru • 180 Ödül</span>
+          </button>
+        </div>
+      </div>
+
       {/* ACTION AREA */}
-      <div className="w-full max-w-sm flex flex-col gap-4">
+      <div className="w-full max-w-sm flex flex-col gap-3">
         {matchStatus ? (
-          <div className="w-full py-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/50 flex flex-col items-center justify-center animate-pulse">
-            <Loader2 className="text-emerald-400 animate-spin mb-2" size={24} />
-            <span className="text-emerald-400 font-bold">{matchStatus}</span>
+          <div className="w-full p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col items-center justify-center gap-3 animate-pulse">
+            <div className="flex items-center gap-2 text-emerald-400 font-bold">
+              <Loader2 className="animate-spin" size={20} />
+              <span>{matchStatus}</span>
+            </div>
+            <p className="text-xs text-gray-400 text-center">
+              {selectedMode === 'classic_10' ? '10 kişilik turnuva için oyuncular aranıyor...' : 'Rakip aranıyor...'}
+            </p>
+            <button
+              onClick={handleCancelMatchmaking}
+              className="mt-1 px-4 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-bold border border-red-500/30 transition-colors"
+            >
+              Aramayı İptal Et
+            </button>
           </div>
         ) : (
           <button
-            onClick={handleQuickJoin}
+            onClick={() => handleJoin(selectedMode)}
             disabled={socketState !== 'CONNECTED'}
             className="w-full relative group"
           >
             <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl blur opacity-25 group-hover:opacity-75 transition duration-200"></div>
             <div className="relative w-full py-5 rounded-2xl bg-gray-900 border border-white/10 flex flex-col items-center justify-center gap-1 group-hover:border-emerald-500/50 transition-colors">
               <div className="flex items-center gap-2 text-white font-bold text-xl">
-                <Zap className="text-emerald-400" />
-                HEMEN OYNA
+                {selectedMode === 'classic_10' ? <Trophy className="text-emerald-400" /> : <Zap className="text-emerald-400" />}
+                {selectedMode === 'classic_10' ? '10 KİŞİLİK MAÇA KATIL' : '2 KİŞİLİK MAÇA KATIL'}
               </div>
-              <div className="flex items-center gap-1.5 text-sm text-gray-400 font-medium">
-                <span>Giriş Ücreti: 100</span>
-                <Coins size={14} className="text-amber-400" />
+              <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
+                <span>Giriş: 100</span>
+                <Coins size={12} className="text-amber-400" />
+                <span className="mx-1">•</span>
+                <span>Ödül: {selectedMode === 'classic_10' ? '900' : '180'}</span>
+                <Coins size={12} className="text-amber-400" />
               </div>
             </div>
           </button>
