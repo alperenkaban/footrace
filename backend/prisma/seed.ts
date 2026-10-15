@@ -42,51 +42,43 @@ async function main() {
   console.log('20 Bot kullanıcısı hazır.');
 
   // 2. GameMode ekle / güncelle (Idempotent upsert)
-  // quick_2 (2 Kişilik Hızlı Maç - 3 Soru)
-  await prisma.gameMode.upsert({
-    where: { name: 'quick_2' },
-    update: {
-      maxPlayers: 2,
-      questionCount: 3,
-      questionDuration: 10,
-      entryFee: 100,
-      rewardMultiplier: 1.0,
-      ratingEnabled: false,
-    },
-    create: {
-      name: 'quick_2',
-      maxPlayers: 2,
-      questionCount: 3,
-      questionDuration: 10,
-      entryFee: 100,
-      rewardMultiplier: 1.0,
-      ratingEnabled: false,
-    },
-  });
-  console.log("GameMode 'quick_2' hazır.");
+  const gameModesList = [
+    // 10 Kişilik Turnuva Modları
+    { name: 'classic_10', maxPlayers: 10, questionCount: 10, questionDuration: 10, entryFee: 100, ratingEnabled: true },
+    { name: 'classic_10_silver', maxPlayers: 10, questionCount: 10, questionDuration: 10, entryFee: 250, ratingEnabled: true },
+    { name: 'classic_10_gold', maxPlayers: 10, questionCount: 10, questionDuration: 10, entryFee: 500, ratingEnabled: true },
+    { name: 'classic_10_diamond', maxPlayers: 10, questionCount: 10, questionDuration: 10, entryFee: 1000, ratingEnabled: true },
 
-  // classic_10 (10 Kişilik Büyük Turnuva - 10 Soru)
-  await prisma.gameMode.upsert({
-    where: { name: 'classic_10' },
-    update: {
-      maxPlayers: 10,
-      questionCount: 10,
-      questionDuration: 10,
-      entryFee: 100,
-      rewardMultiplier: 1.0,
-      ratingEnabled: true,
-    },
-    create: {
-      name: 'classic_10',
-      maxPlayers: 10,
-      questionCount: 10,
-      questionDuration: 10,
-      entryFee: 100,
-      rewardMultiplier: 1.0,
-      ratingEnabled: true,
-    },
-  });
-  console.log("GameMode 'classic_10' hazır.");
+    // 2 Kişilik Hızlı Düello Modları
+    { name: 'quick_2', maxPlayers: 2, questionCount: 3, questionDuration: 10, entryFee: 100, ratingEnabled: false },
+    { name: 'quick_2_silver', maxPlayers: 2, questionCount: 3, questionDuration: 10, entryFee: 250, ratingEnabled: false },
+    { name: 'quick_2_gold', maxPlayers: 2, questionCount: 3, questionDuration: 10, entryFee: 500, ratingEnabled: false },
+    { name: 'quick_2_diamond', maxPlayers: 2, questionCount: 3, questionDuration: 10, entryFee: 1000, ratingEnabled: false },
+  ];
+
+  for (const m of gameModesList) {
+    await prisma.gameMode.upsert({
+      where: { name: m.name },
+      update: {
+        maxPlayers: m.maxPlayers,
+        questionCount: m.questionCount,
+        questionDuration: m.questionDuration,
+        entryFee: m.entryFee,
+        rewardMultiplier: 1.0,
+        ratingEnabled: m.ratingEnabled,
+      },
+      create: {
+        name: m.name,
+        maxPlayers: m.maxPlayers,
+        questionCount: m.questionCount,
+        questionDuration: m.questionDuration,
+        entryFee: m.entryFee,
+        rewardMultiplier: 1.0,
+        ratingEnabled: m.ratingEnabled,
+      },
+    });
+  }
+  console.log(`${gameModesList.length} GameMode (Bronz, Gümüş, Altın, Elmas) hazır.`);
 
   // 3. Harici questions.json dosyasından soruları yükle (Idempotent upsert)
   const questionsPath = path.join(__dirname, 'questions.json');

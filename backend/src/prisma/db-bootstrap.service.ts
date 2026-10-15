@@ -67,52 +67,47 @@ export class DbBootstrapService implements OnApplicationBootstrap {
   }
 
   /**
-   * quick_2 ve classic_10 oyun modlarının veritabanında varlığını garanti eder.
+   * Tüm bütçe kademeleri için (100, 250, 500, 1000 coin) oyun modlarının veritabanında varlığını garanti eder.
    */
   private async ensureGameModes(): Promise<void> {
-    await this.prisma.gameMode.upsert({
-      where: { name: 'quick_2' },
-      update: {
-        maxPlayers: 2,
-        questionCount: 3,
-        questionDuration: 10,
-        entryFee: 100,
-        rewardMultiplier: 1.0,
-        ratingEnabled: false,
-      },
-      create: {
-        name: 'quick_2',
-        maxPlayers: 2,
-        questionCount: 3,
-        questionDuration: 10,
-        entryFee: 100,
-        rewardMultiplier: 1.0,
-        ratingEnabled: false,
-      },
-    });
+    const modes = [
+      // 10 Kişilik Turnuva Modları
+      { name: 'classic_10', maxPlayers: 10, questionCount: 10, questionDuration: 10, entryFee: 100, ratingEnabled: true },
+      { name: 'classic_10_silver', maxPlayers: 10, questionCount: 10, questionDuration: 10, entryFee: 250, ratingEnabled: true },
+      { name: 'classic_10_gold', maxPlayers: 10, questionCount: 10, questionDuration: 10, entryFee: 500, ratingEnabled: true }, // Kullanıcı örneği: 500 Giriş, 4500 Ödül
+      { name: 'classic_10_diamond', maxPlayers: 10, questionCount: 10, questionDuration: 10, entryFee: 1000, ratingEnabled: true },
 
-    await this.prisma.gameMode.upsert({
-      where: { name: 'classic_10' },
-      update: {
-        maxPlayers: 10,
-        questionCount: 10,
-        questionDuration: 10,
-        entryFee: 100,
-        rewardMultiplier: 1.0,
-        ratingEnabled: true,
-      },
-      create: {
-        name: 'classic_10',
-        maxPlayers: 10,
-        questionCount: 10,
-        questionDuration: 10,
-        entryFee: 100,
-        rewardMultiplier: 1.0,
-        ratingEnabled: true,
-      },
-    });
+      // 2 Kişilik Hızlı Düello Modları
+      { name: 'quick_2', maxPlayers: 2, questionCount: 3, questionDuration: 10, entryFee: 100, ratingEnabled: false },
+      { name: 'quick_2_silver', maxPlayers: 2, questionCount: 3, questionDuration: 10, entryFee: 250, ratingEnabled: false },
+      { name: 'quick_2_gold', maxPlayers: 2, questionCount: 3, questionDuration: 10, entryFee: 500, ratingEnabled: false },
+      { name: 'quick_2_diamond', maxPlayers: 2, questionCount: 3, questionDuration: 10, entryFee: 1000, ratingEnabled: false },
+    ];
 
-    this.logger.log("GameModes 'quick_2' and 'classic_10' verified.");
+    for (const m of modes) {
+      await this.prisma.gameMode.upsert({
+        where: { name: m.name },
+        update: {
+          maxPlayers: m.maxPlayers,
+          questionCount: m.questionCount,
+          questionDuration: m.questionDuration,
+          entryFee: m.entryFee,
+          rewardMultiplier: 1.0,
+          ratingEnabled: m.ratingEnabled,
+        },
+        create: {
+          name: m.name,
+          maxPlayers: m.maxPlayers,
+          questionCount: m.questionCount,
+          questionDuration: m.questionDuration,
+          entryFee: m.entryFee,
+          rewardMultiplier: 1.0,
+          ratingEnabled: m.ratingEnabled,
+        },
+      });
+    }
+
+    this.logger.log(`Verified ${modes.length} budget-tier GameModes (Entry 100, 250, 500, 1000).`);
   }
 
   /**

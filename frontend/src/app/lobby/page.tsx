@@ -4,19 +4,97 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useSocket } from '@/providers/SocketProvider';
-import { Coins, Trophy, LogOut, Loader2, Zap, ShoppingBag, Bot, Plus } from 'lucide-react';
+import { Coins, Trophy, LogOut, Loader2, Zap, ShoppingBag, Bot, Plus, Flame, Crown, Shield } from 'lucide-react';
 import { AdBanner } from '@/components/AdBanner';
+
+export type FormatType = 'classic_10' | 'quick_2';
+export type BudgetTierKey = 'bronze' | 'silver' | 'gold' | 'diamond';
+
+interface BudgetTier {
+  key: BudgetTierKey;
+  name: string;
+  badge: string;
+  entryFee: number;
+  prize10: number; // 900, 2250, 4500, 9000
+  prize2: number;  // 180, 450, 900, 1800
+  color: string;
+  borderColor: string;
+  textColor: string;
+  tag?: string;
+}
+
+const BUDGET_TIERS: BudgetTier[] = [
+  {
+    key: 'bronze',
+    name: 'Bronz Lobi',
+    badge: 'ÇAYLAK',
+    entryFee: 100,
+    prize10: 900,
+    prize2: 180,
+    color: 'from-amber-700/20 to-amber-950/30',
+    borderColor: 'border-amber-700/40',
+    textColor: 'text-amber-500',
+  },
+  {
+    key: 'silver',
+    name: 'Gümüş Lobi',
+    badge: 'AMATÖR',
+    entryFee: 250,
+    prize10: 2250,
+    prize2: 450,
+    color: 'from-slate-400/20 to-gray-800/30',
+    borderColor: 'border-slate-400/40',
+    textColor: 'text-slate-300',
+  },
+  {
+    key: 'gold',
+    name: 'Altın Lobi',
+    badge: 'ŞAMPİYON',
+    tag: 'FIRSAT',
+    entryFee: 500,
+    prize10: 4500, // Giriş 500, Ödül 4500!
+    prize2: 900,
+    color: 'from-amber-500/25 via-yellow-600/20 to-orange-500/15',
+    borderColor: 'border-amber-400/60 shadow-[0_0_15px_rgba(251,191,36,0.25)]',
+    textColor: 'text-amber-300',
+  },
+  {
+    key: 'diamond',
+    name: 'Elmas Lobi',
+    badge: 'EFSANELER',
+    tag: 'HIGH ROLLER',
+    entryFee: 1000,
+    prize10: 9000,
+    prize2: 1800,
+    color: 'from-cyan-500/25 via-blue-600/20 to-indigo-600/15',
+    borderColor: 'border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.25)]',
+    textColor: 'text-cyan-300',
+  },
+];
+
+function getGameModeId(format: FormatType, tier: BudgetTierKey): string {
+  if (tier === 'bronze') return format;
+  return `${format}_${tier}`;
+}
 
 export default function LobbyPage() {
   const { user, isAuthenticated, initialized, logout } = useAuthStore();
   const router = useRouter();
   const { socket, socketState } = useSocket();
   
-  const [selectedMode, setSelectedMode] = useState<'quick_2' | 'classic_10'>('classic_10');
+  const [selectedFormat, setSelectedFormat] = useState<FormatType>('classic_10');
+  const [selectedTier, setSelectedTier] = useState<BudgetTierKey>('bronze');
   const [matchStatus, setMatchStatus] = useState<string | null>(null);
   const [searchSeconds, setSearchSeconds] = useState<number>(0);
+  
   // BUG FIX: prevent double-click sending duplicate matchmaking requests
   const isJoiningRef = useRef(false);
+
+  const activeTier = BUDGET_TIERS.find((t) => t.key === selectedTier) || BUDGET_TIERS[0];
+  const activeModeId = getGameModeId(selectedFormat, selectedTier);
+  const activeEntryFee = activeTier.entryFee;
+  const activePrize = selectedFormat === 'classic_10' ? activeTier.prize10 : activeTier.prize2;
+  const hasSufficientBalance = (user?.balance ?? 0) >= activeEntryFee;
 
   useEffect(() => {
     if (initialized && !isAuthenticated) {
@@ -58,7 +136,7 @@ export default function LobbyPage() {
       isJoiningRef.current = false;
       setMatchStatus(null);
       if (err.code === 'INSUFFICIENT_FUNDS') {
-        alert('Bakiye yetersiz! Maça giriş için 100 Coin gereklidir. Mağazadan bakiye yükleyebilirsiniz.');
+        alert(`Bakiye yetersiz! Bu lobiye giriş için ${activeEntryFee} Coin gereklidir. Mağazadan bakiye yükleyebilirsiniz.`);
       } else {
         alert(`Eşleştirme Bildirimi: ${err.message || err.code || 'Bir hata oluştu'}`);
       }
@@ -67,7 +145,7 @@ export default function LobbyPage() {
     const onMatchmakingStatus = (data: any) => {
       console.log('[LOBBY] matchmaking_status:', data);
       if (data.status === 'searching') {
-        setMatchStatus('Rakip aranıyor...');
+        setMatchStatus('Oyuncular aranıyor...');
       } else {
         // BUG FIX: reset joining lock when cancelled
         isJoiningRef.current = false;
@@ -77,7 +155,7 @@ export default function LobbyPage() {
 
     const onMatchFound = (data: any) => {
       console.log('[LOBBY] match_found:', data);
-      setMatchStatus('Rakip bulundu! Odaya giriliyor...');
+      setMatchStatus('Oda hazır! Giriş yapılıyor...');
       // Navigate immediately, no delay
       router.push(`/game/${data.roomId}`);
     };
@@ -93,21 +171,25 @@ export default function LobbyPage() {
       socket.off('matchmaking_status', onMatchmakingStatus);
       socket.off('match_found', onMatchFound);
     };
-  }, [socket, router]);
+  }, [socket, router, activeEntryFee]);
 
   const handleLogout = () => {
     logout();
   };
 
-  const handleJoin = (modeId: 'quick_2' | 'classic_10') => {
+  const handleJoin = (modeId: string) => {
     console.log('[LOBBY] handleJoin clicked:', modeId);
+    if (!hasSufficientBalance) {
+      router.push('/shop');
+      return;
+    }
     if (isJoiningRef.current) {
       console.log('[LOBBY] Already joining, ignoring click');
       return;
     }
     if (socket && socket.connected) {
       isJoiningRef.current = true;
-      setMatchStatus('Odaya bağlanılıyor...');
+      setMatchStatus('Lobiye bağlanılıyor...');
       socket.emit('join_matchmaking', { gameModeId: modeId });
     } else {
       alert(`Sunucuya bağlanılıyor (Durum: ${socketState}). Lütfen 1-2 saniye bekleyin.`);
@@ -116,15 +198,15 @@ export default function LobbyPage() {
 
   const handleForceBotMatch = () => {
     if (socket && socket.connected) {
-      console.log('[LOBBY] Triggering quick bot match for:', selectedMode);
+      console.log('[LOBBY] Triggering quick bot match for:', activeModeId);
       setMatchStatus('Botlarla maç başlatılıyor...');
-      socket.emit('request_bot_match', { gameModeId: selectedMode });
+      socket.emit('request_bot_match', { gameModeId: activeModeId });
     }
   };
 
   const handleCancelMatchmaking = () => {
     if (socket && socket.connected) {
-      socket.emit('leave_matchmaking', { gameModeId: selectedMode });
+      socket.emit('leave_matchmaking', { gameModeId: activeModeId });
       isJoiningRef.current = false;
       setMatchStatus(null);
     }
@@ -205,13 +287,13 @@ export default function LobbyPage() {
         </div>
       </div>
 
-      {/* GAME MODE SELECTION TABS */}
-      <div className="w-full max-w-sm mb-4">
+      {/* GAME FORMAT SELECTION TABS (10 Kişilik vs 2 Kişilik) */}
+      <div className="w-full max-w-sm mb-3">
         <div className="grid grid-cols-2 gap-2 p-1.5 bg-black/40 rounded-2xl border border-white/10">
           <button
-            onClick={() => setSelectedMode('classic_10')}
+            onClick={() => setSelectedFormat('classic_10')}
             className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-1 ${
-              selectedMode === 'classic_10'
+              selectedFormat === 'classic_10'
                 ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-md'
                 : 'text-gray-400 hover:text-white'
             }`}
@@ -220,13 +302,13 @@ export default function LobbyPage() {
               <Trophy size={14} />
               <span>10 Kişilik Turnuva</span>
             </div>
-            <span className="text-[10px] opacity-80 font-normal">10 Soru • 900 Ödül</span>
+            <span className="text-[10px] opacity-80 font-normal">10 Soru • Dereceli</span>
           </button>
 
           <button
-            onClick={() => setSelectedMode('quick_2')}
+            onClick={() => setSelectedFormat('quick_2')}
             className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-1 ${
-              selectedMode === 'quick_2'
+              selectedFormat === 'quick_2'
                 ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-md'
                 : 'text-gray-400 hover:text-white'
             }`}
@@ -235,8 +317,69 @@ export default function LobbyPage() {
               <Zap size={14} />
               <span>2 Kişilik Hızlı</span>
             </div>
-            <span className="text-[10px] opacity-80 font-normal">3 Soru • 180 Ödül</span>
+            <span className="text-[10px] opacity-80 font-normal">3 Soru • Düello</span>
           </button>
+        </div>
+      </div>
+
+      {/* BUDGET TIERS SELECTION (Farklı Bütçeler İçin Lobiler) */}
+      <div className="w-full max-w-sm mb-4">
+        <div className="flex justify-between items-center mb-2 px-1">
+          <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">
+            Lobi & Bütçe Seçimi
+          </span>
+          <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+            <Coins size={12} className="text-amber-400" />
+            <span>Havuz: {activePrize} Coin</span>
+          </span>
+        </div>
+
+        {/* 4 Tier Grid */}
+        <div className="grid grid-cols-2 gap-2">
+          {BUDGET_TIERS.map((tier) => {
+            const isSelected = selectedTier === tier.key;
+            const prize = selectedFormat === 'classic_10' ? tier.prize10 : tier.prize2;
+            const canAfford = (user?.balance ?? 0) >= tier.entryFee;
+
+            return (
+              <button
+                key={tier.key}
+                onClick={() => setSelectedTier(tier.key)}
+                className={`relative p-3 rounded-2xl border text-left transition-all flex flex-col justify-between ${
+                  isSelected
+                    ? `bg-gradient-to-br ${tier.color} ${tier.borderColor} ring-1 ring-white/20`
+                    : 'bg-black/30 border-white/10 hover:border-white/20 text-gray-400'
+                }`}
+              >
+                {/* Tag */}
+                {tier.tag && (
+                  <span className="absolute -top-2 right-2 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase bg-amber-400 text-gray-950 shadow-sm">
+                    {tier.tag}
+                  </span>
+                )}
+
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-[10px] font-black tracking-wider uppercase ${isSelected ? tier.textColor : 'text-gray-400'}`}>
+                      {tier.name}
+                    </span>
+                    {!canAfford && (
+                      <span className="text-[9px] text-red-400 font-bold bg-red-500/10 px-1 py-0.2 rounded">Yetersiz</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 mt-1 text-white font-black text-sm">
+                    <span>{tier.entryFee}</span>
+                    <Coins size={13} className="text-amber-400" />
+                  </div>
+                </div>
+
+                <div className="mt-2 pt-1.5 border-t border-white/5 flex items-center justify-between text-[10px]">
+                  <span className="text-gray-400">Ödül:</span>
+                  <span className="font-bold text-emerald-400">{prize} Coin</span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -252,7 +395,7 @@ export default function LobbyPage() {
             {/* Live 15s Countdown Bar */}
             <div className="w-full flex flex-col gap-1.5">
               <div className="flex justify-between items-center text-xs text-gray-400">
-                <span>Arama Süresi</span>
+                <span>{activeTier.name} ({activeEntryFee} Coin)</span>
                 <span className="font-mono font-bold text-emerald-300">
                   0:{searchSeconds.toString().padStart(2, '0')} / 0:15
                 </span>
@@ -268,8 +411,8 @@ export default function LobbyPage() {
             <p className="text-[11px] text-gray-400 text-center leading-tight">
               {searchSeconds >= 12
                 ? '🤖 Oyuncu aranıyor... 15s dolunca botlarla otomatik başlatılıyor!'
-                : selectedMode === 'classic_10'
-                  ? 'Turnuva için diğer yarışmacılar toplanıyor (Maks. 15 sn)'
+                : selectedFormat === 'classic_10'
+                  ? `${activeTier.name} için diğer yarışmacılar toplanıyor (Maks. 15 sn)`
                   : 'Rakip aranıyor (Maks. 15 sn)'}
             </p>
 
@@ -291,7 +434,7 @@ export default function LobbyPage() {
           </div>
         ) : (
           <button
-            onClick={() => handleJoin(selectedMode)}
+            onClick={() => handleJoin(activeModeId)}
             disabled={socketState !== 'CONNECTED'}
             className={`w-full relative group transition-all duration-200 ${
               socketState !== 'CONNECTED' ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer active:scale-[0.98]'
@@ -299,24 +442,35 @@ export default function LobbyPage() {
           >
             <div className={`absolute -inset-1 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl blur opacity-25 ${socketState === 'CONNECTED' ? 'group-hover:opacity-75' : ''} transition duration-200`}></div>
             <div className="relative w-full py-4.5 rounded-2xl bg-gray-900 border border-white/10 flex flex-col items-center justify-center gap-1 group-hover:border-emerald-500/50 transition-colors">
-              <div className="flex items-center gap-2 text-white font-bold text-lg">
+              <div className="flex items-center gap-2 text-white font-black text-lg">
                 {socketState === 'CONNECTING' ? (
                   <>
                     <Loader2 className="animate-spin text-emerald-400" size={20} />
                     <span>SUNUCUYA BAĞLANILIYOR...</span>
                   </>
+                ) : !hasSufficientBalance ? (
+                  <div className="flex items-center gap-1.5 text-amber-400">
+                    <Coins size={18} />
+                    <span>YETERSİZ BAKİYE • COİN YÜKLE</span>
+                  </div>
                 ) : (
                   <>
-                    {selectedMode === 'classic_10' ? <Trophy className="text-emerald-400" size={20} /> : <Zap className="text-emerald-400" size={20} />}
-                    <span>{selectedMode === 'classic_10' ? '10 KİŞİLİK MAÇA KATIL' : '2 KİŞİLİK MAÇA KATIL'}</span>
+                    {selectedFormat === 'classic_10' ? (
+                      <Trophy className="text-emerald-400" size={20} />
+                    ) : (
+                      <Zap className="text-emerald-400" size={20} />
+                    )}
+                    <span>
+                      {activeTier.name.toUpperCase()}YE KATIL
+                    </span>
                   </>
                 )}
               </div>
               <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
-                <span>Giriş: 100</span>
+                <span>Giriş: {activeEntryFee}</span>
                 <Coins size={12} className="text-amber-400" />
                 <span className="mx-1">•</span>
-                <span>Ödül: {selectedMode === 'classic_10' ? '900' : '180'}</span>
+                <span className="text-emerald-400 font-bold">Ödül: {activePrize}</span>
                 <Coins size={12} className="text-amber-400" />
               </div>
             </div>
@@ -358,4 +512,5 @@ export default function LobbyPage() {
     </div>
   );
 }
+
 

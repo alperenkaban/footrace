@@ -40,33 +40,39 @@ export class MatchmakingService implements OnModuleInit, OnModuleDestroy {
    * Kuyrukta 12 saniyeden uzun süre bekleyen oyuncuları tespit edip botlarla oyunu başlatır.
    */
   private async checkStaleQueues() {
-    const modes = ['classic_10', 'quick_2'];
-    const now = Date.now();
+    try {
+      const activeModes = await this.prisma.gameMode.findMany({
+        select: { name: true, maxPlayers: true },
+      });
+      const now = Date.now();
 
-    for (const modeId of modes) {
-      const queueName = `matchmaking_queue:${modeId}`;
-      const players = await this.redisService.dequeuePlayers(queueName, 20, false);
-      if (!players.length) continue;
+      for (const mode of activeModes) {
+        const modeId = mode.name;
+        const queueName = `matchmaking_queue:${modeId}`;
+        const players = await this.redisService.dequeuePlayers(queueName, 20, false);
+        if (!players.length) continue;
 
-      let hasStalePlayer = false;
-      for (const pid of players) {
-        const joinTimeStr = await this.redisService.get(`player_queue_time:${pid}`);
-        const joinTime = joinTimeStr ? parseInt(joinTimeStr, 10) : now;
-        if (now - joinTime >= 12000) {
-          hasStalePlayer = true;
-          break;
+        let hasStalePlayer = false;
+        for (const pid of players) {
+          const joinTimeStr = await this.redisService.get(`player_queue_time:${pid}`);
+          const joinTime = joinTimeStr ? parseInt(joinTimeStr, 10) : now;
+          if (now - joinTime >= 12000) {
+            hasStalePlayer = true;
+            break;
+          }
+        }
+
+        // Oyuncuları kuyruğa geri koy
+        for (const pid of players) {
+          await this.redisService.enqueuePlayer(queueName, pid);
+        }
+
+        if (hasStalePlayer) {
+          await this.backfillWithBots(modeId, mode.maxPlayers || (modeId.startsWith('classic_10') ? 10 : 2));
         }
       }
-
-      // Oyuncuları kuyruğa geri koy
-      for (const pid of players) {
-        await this.redisService.enqueuePlayer(queueName, pid);
-      }
-
-      if (hasStalePlayer) {
-        const mode = await this.prisma.gameMode.findUnique({ where: { name: modeId } });
-        await this.backfillWithBots(modeId, mode?.maxPlayers || (modeId === 'classic_10' ? 10 : 2));
-      }
+    } catch (err) {
+      this.logger.warn(`Error scanning stale queues: ${(err as Error).message}`);
     }
   }
 
