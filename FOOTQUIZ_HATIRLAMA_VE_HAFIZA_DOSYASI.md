@@ -1,11 +1,11 @@
 # FOOTQUIZ — PROJE HAFIZA VE HATIRLAMA DOSYASI (CHECKPOINT)
 
 > **Asistan:** Nova  
-> **Tarih:** 12 Ekim 2026  
-> **Konum:** Kök Dizin (`c:\Users\Alperen\Desktop\Footquiz\FOOTQUIZ_HATIRLAMA_VE_HAFIZA_DOSYASI.md`)  
-> **Bağlı Mimari Rapor:** `c:\Users\Alperen\Desktop\Footquiz\FOOTQUIZ_MIMARI_VE_PROJE_RAPORU.txt`  
+> **Tarih:** 15 Ekim 2026  
+> **Konum:** Kök Dizin (`c:\Users\Alperen\Desktop\Footrace\FOOTQUIZ_HATIRLAMA_VE_HAFIZA_DOSYASI.md`)  
+> **Bağlı Mimari Rapor:** `c:\Users\Alperen\Desktop\Footrace\FOOTQUIZ_MIMARI_VE_PROJE_RAPORU.txt`  
 > **Git Deposu:** `https://github.com/alperenkaban/footrace.git` (Branch: `main`)  
-> **Mevcut Sürüm Durumu:** Sürüm 1.4.0 — Sınırlı Beta İçin Hazır (Limited Beta Ready)
+> **Mevcut Sürüm Durumu:** Sürüm 1.4.1 — 10 Kişilik Eşleştirme & Canlı İstemci Tepki İyileştirmesi (Matchmaking Hotfix Ready)
 
 ---
 
@@ -157,6 +157,22 @@ Footquiz/
     └── src/store/                            <- Zustand useAuthStore
 ```
 
+---
+
+## 7. Sürüm 1.4.1 — 10 Kişilik Eşleştirme & Tepki Süresi Düzeltmeleri (15 Ekim 2026)
+
+- **Tespit Edilen Kök Nedenler:**
+  1. *İstemci Tepkisizliği:* `transports: ['websocket']` direkt WS zorlaması nedeniyle ilk el sıkışma 3-5 saniye gecikiyordu. Butonda `disabled={socketState !== 'CONNECTED'}` varken görsel bir disabled/spinner stili olmadığı için tıklamalar boşa düşüyor, bağlantı kurulunca 3-5. tıklamada yanıt veriyordu.
+  2. *Anlık Geri Bildirim Eksikliği:* Tıklandığında istemci tarafında optimistik durum güncellenmiyor, sunucudan `matchmaking_status` gelene kadar buton normal duruyordu.
+  3. *Render DB Şema / Seed Eksikliği:* `start:prod` komutunda `prisma migrate deploy` olmadığı için canlıda `MatchHold` tablosu eksikti. Ayrıca `classic_10` modu ve botlar canlı DB'de eksik olduğunda backfill sessizce çöküyor ve oyuncu sonsuza kadar "Rakip aranıyor..."da kalıyordu.
+- **Uygulanan Çözümler:**
+  - `DbBootstrapService`: Backend açılışında `MatchHold` tablosunu, `CoinTransaction` unique indeksini, `quick_2` ve `classic_10` modlarını, 20 botu ve soruları otomatik doğrulayıp eksikleri onaran kendini iyileştirme (self-healing) servisi eklendi.
+  - `start:prod`: `prisma migrate deploy && node dist/main` zinciri kurularak canlı dağıtımlarda otomatik migration sağlandı.
+  - `BotService.getAvailableBots`: Yetersiz bot durumunda anında dinamik bot üretme fallback'i eklendi (10 kişilik maçlar asla eksik kalmaz).
+  - `SocketProvider`: `transports: ['polling', 'websocket']` yapılarak anında HTTP bağlantısı ve pürüzsüz WS yükseltmesi sağlandı.
+  - `LobbyPage`: Butona `SUNUCUYA BAĞLANILIYOR...` spinner göstergesi, optimistik `Odaya bağlanılıyor...` anlık durum geçişi ve buton tıklama geribildirimi eklendi.
+  - Eşleştirme süresi 3s'den 2s'ye optimize edildi.
+
 ===============================================================================
-[HAFIZA DOSYASI SONU — NOVA — SÜRÜM 1.4.0 — CHECKPOINT KAYDEDİLDİ]
+[HAFIZA DOSYASI SONU — NOVA — SÜRÜM 1.4.1 — CHECKPOINT KAYDEDİLDİ]
 ===============================================================================

@@ -21,7 +21,7 @@ export class MatchmakingService {
   async joinQueue(userId: string, gameModeId: string): Promise<void> {
     const queueName = `matchmaking_queue:${gameModeId}`;
     
-    // 1. Zaten aktif bir odada mı kontrol et (GAME_FINISHED kalıntı kontrolleri ile self-healing)
+    // 1. Zaten aktif bir odada mı kontrol et (GAME_FINISHED veya silinmiş odalar için self-healing)
     const existingRoom = await this.redisService.get(`player_room:${userId}`);
     if (existingRoom) {
       const roomData = await this.redisService.get(`room:${existingRoom}`);
@@ -65,10 +65,13 @@ export class MatchmakingService {
       const mode = await this.prisma.gameMode.findUnique({
         where: { name: gameModeId },
       });
-      const entryFee = mode?.entryFee || 0;
+      if (!mode) {
+        throw new Error(`Oyun modu (${gameModeId}) bulunamadı. Lütfen daha sonra tekrar deneyin.`);
+      }
+      const entryFee = mode.entryFee || 0;
 
       // Oyuncunun bakiyesini bloke et (Eğer yeterli değilse hata fırlatacak)
-      const holdRes = await this.walletService.holdEntryFee(userId, entryFee, { gameModeId: mode?.id });
+      const holdRes = await this.walletService.holdEntryFee(userId, entryFee, { gameModeId: mode.id });
       const holdId = holdRes?.holdId;
 
       // Kuyruk ve açık hold takibini Redis'e kaydet
@@ -80,11 +83,11 @@ export class MatchmakingService {
       this.logger.log(`User ${userId} joined queue ${queueName} (Fee: ${entryFee}, Hold: ${holdId || 'none'})`);
       
       // Normal match araması
-      const matched = await this.tryMatch(gameModeId, mode?.maxPlayers || 2); 
+      const matched = await this.tryMatch(gameModeId, mode.maxPlayers || 2); 
       
       if (!matched) {
-        // Eğer maç bulunamadıysa, 3 saniye sonra botlarla doldur
-        setTimeout(() => this.backfillWithBots(gameModeId, mode?.maxPlayers || 2), 3000);
+        // Eğer maç anında bulunamadıysa, 2 saniye sonra botlarla doldur
+        setTimeout(() => this.backfillWithBots(gameModeId, mode.maxPlayers || 2), 2000);
       }
     } finally {
       await this.redisService.del(lockKey);
@@ -126,6 +129,8 @@ export class MatchmakingService {
       // Botlardan asla ücret alınmaz; kuyruktaki gerçek oyuncuların ücretleri initializeRoom içinde
       // maça bağlanıp refundMatchHolds ile tam bir kez iade edilir.
       await this.startMatch(gameModeId, finalPlayers);
+    } catch (error) {
+      this.logger.error(`Backfill failed for ${gameModeId}: ${(error as Error).message}`, (error as Error).stack);
     } finally {
       // Kilidi her zaman serbest bırak
       await this.redisService.del(lockKey);

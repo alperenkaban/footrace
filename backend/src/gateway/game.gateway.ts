@@ -78,8 +78,10 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       await this.matchmakingService.joinQueue(userId, data.gameModeId);
       client.emit('matchmaking_status', { status: 'searching', estimatedTime: 15 });
     } catch (error) {
-      this.logger.error(`Matchmaking join failed for ${userId}: ${(error as Error).message}`);
-      client.emit('error', { code: 'INSUFFICIENT_FUNDS', message: (error as Error).message });
+      const msg = (error as Error).message || 'Eşleştirme hatası';
+      this.logger.error(`Matchmaking join failed for ${userId}: ${msg}`);
+      const code = msg.toLowerCase().includes('bakiye') ? 'INSUFFICIENT_FUNDS' : 'QUEUE_ERROR';
+      client.emit('error', { code, message: msg });
     }
   }
 

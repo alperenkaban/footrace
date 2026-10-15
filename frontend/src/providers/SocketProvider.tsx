@@ -53,7 +53,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     console.log('[SOCKET] Connecting to', API_URL);
     const newSocket = io(API_URL, {
       auth: { token: accessToken },
-      transports: ['websocket'],
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,

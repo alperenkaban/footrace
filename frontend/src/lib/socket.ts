@@ -12,7 +12,7 @@ export const connectSocket = (token: string) => {
   
   socket = io(URL, {
     auth: { token }, // JWT auth object
-    transports: ['websocket'],
+    transports: ['polling', 'websocket'],
     reconnection: true,
   });
 

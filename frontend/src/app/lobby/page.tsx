@@ -38,12 +38,12 @@ export default function LobbyPage() {
       console.error('[LOBBY] Socket error:', err);
       // BUG FIX: reset joining lock on error
       isJoiningRef.current = false;
+      setMatchStatus(null);
       if (err.code === 'INSUFFICIENT_FUNDS') {
         alert('Bakiye yetersiz! Maça giriş için 100 Coin gereklidir.');
       } else {
-        alert(`Sunucu Hatası: ${err.message || err.code || JSON.stringify(err)}`);
+        alert(`Eşleştirme Bildirimi: ${err.message || err.code || 'Bir hata oluştu'}`);
       }
-      setMatchStatus(null);
     };
 
     const onMatchmakingStatus = (data: any) => {
@@ -89,9 +89,10 @@ export default function LobbyPage() {
     }
     if (socket && socket.connected) {
       isJoiningRef.current = true;
+      setMatchStatus('Odaya bağlanılıyor...');
       socket.emit('join_matchmaking', { gameModeId: modeId });
     } else {
-      alert(`Socket bağlı değil! Durum: ${socketState}. Sayfayı yenileyin.`);
+      alert(`Sunucuya bağlanılıyor (Durum: ${socketState}). Lütfen 1-2 saniye bekleyin.`);
     }
   };
 
@@ -208,13 +209,24 @@ export default function LobbyPage() {
           <button
             onClick={() => handleJoin(selectedMode)}
             disabled={socketState !== 'CONNECTED'}
-            className="w-full relative group"
+            className={`w-full relative group transition-all duration-200 ${
+              socketState !== 'CONNECTED' ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer active:scale-[0.98]'
+            }`}
           >
-            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl blur opacity-25 group-hover:opacity-75 transition duration-200"></div>
+            <div className={`absolute -inset-1 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl blur opacity-25 ${socketState === 'CONNECTED' ? 'group-hover:opacity-75' : ''} transition duration-200`}></div>
             <div className="relative w-full py-5 rounded-2xl bg-gray-900 border border-white/10 flex flex-col items-center justify-center gap-1 group-hover:border-emerald-500/50 transition-colors">
               <div className="flex items-center gap-2 text-white font-bold text-xl">
-                {selectedMode === 'classic_10' ? <Trophy className="text-emerald-400" /> : <Zap className="text-emerald-400" />}
-                {selectedMode === 'classic_10' ? '10 KİŞİLİK MAÇA KATIL' : '2 KİŞİLİK MAÇA KATIL'}
+                {socketState === 'CONNECTING' ? (
+                  <>
+                    <Loader2 className="animate-spin text-emerald-400" size={22} />
+                    <span>SUNUCUYA BAĞLANILIYOR...</span>
+                  </>
+                ) : (
+                  <>
+                    {selectedMode === 'classic_10' ? <Trophy className="text-emerald-400" /> : <Zap className="text-emerald-400" />}
+                    <span>{selectedMode === 'classic_10' ? '10 KİŞİLİK MAÇA KATIL' : '2 KİŞİLİK MAÇA KATIL'}</span>
+                  </>
+                )}
               </div>
               <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
                 <span>Giriş: 100</span>

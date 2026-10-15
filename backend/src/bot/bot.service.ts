@@ -51,7 +51,36 @@ export class BotService {
     });
 
     const shuffled = [...bots].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, count).map(b => b.id);
+    const selected = shuffled.slice(0, count).map((b) => b.id);
+
+    // DB'de yeterli bot yoksa anında dinamik bot profilleri oluşturarak sayıyı tamamla
+    if (selected.length < count) {
+      const neededMore = count - selected.length;
+      for (let i = 1; i <= neededMore; i++) {
+        const dynIndex = selected.length + i;
+        const dynEmail = `bot_dyn_${Date.now()}_${dynIndex}@footquiz.local`;
+        try {
+          const newBot = await this.prisma.user.create({
+            data: {
+              email: dynEmail,
+              isGuest: false,
+              isBot: true,
+              profile: {
+                create: {
+                  rating: 1000,
+                  balance: 100000,
+                },
+              },
+            },
+          });
+          selected.push(newBot.id);
+        } catch (err) {
+          this.logger.warn(`Failed to dynamically create bot: ${(err as Error).message}`);
+        }
+      }
+    }
+
+    return selected;
   }
 
   /**
