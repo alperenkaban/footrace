@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { WalletModule } from './wallet/wallet.module.js';
 import { BotModule } from './bot/bot.module.js';
 import { LeaderboardModule } from './leaderboard/leaderboard.module.js';
+import { ShopModule } from './shop/shop.module.js';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { LeaderboardModule } from './leaderboard/leaderboard.module.js';
     WalletModule,
     BotModule,
     LeaderboardModule,
+    ShopModule,
   ],
   controllers: [AppController],
   providers: [AppService],

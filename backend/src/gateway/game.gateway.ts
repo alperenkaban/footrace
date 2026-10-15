@@ -109,6 +109,18 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     client.emit('matchmaking_status', { status: 'cancelled' });
   }
 
+  @SubscribeMessage('request_bot_match')
+  async handleRequestBotMatch(
+    @MessageBody() data: { gameModeId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const userId = this.clientMapping.get(client.id);
+    if (!userId) return;
+
+    this.logger.log(`User ${userId} requested immediate bot backfill for ${data?.gameModeId || 'classic_10'}`);
+    await this.matchmakingService.forceBackfill(data?.gameModeId || 'classic_10');
+  }
+
   @SubscribeMessage('submit_answer')
   async handleSubmitAnswer(
     @MessageBody() data: { questionIndex: number; answer: any },

@@ -11,22 +11,27 @@ export class LeaderboardService {
     private readonly redisService: RedisService,
   ) {}
 
-  async getGlobalLeaderboard(limit = 100) {
-    const cacheKey = `leaderboard:global:top_${limit}`;
+  async getGlobalLeaderboard(limit = 100, type: 'rating' | 'wins' = 'rating') {
+    const sortType = type === 'wins' ? 'wins' : 'rating';
+    const cacheKey = `leaderboard:global:${sortType}:top_${limit}`;
     const cached = await this.redisService.get(cacheKey);
 
     if (cached) {
       return JSON.parse(cached);
     }
 
-    // Top 100 players by rating (BOTS EXCLUDED from competitive leaderboard)
+    // Top players by rating or wins (BOTS EXCLUDED from competitive leaderboard)
+    const orderByClause = sortType === 'wins'
+      ? [{ wins: 'desc' as const }, { rating: 'desc' as const }]
+      : [{ rating: 'desc' as const }, { wins: 'desc' as const }];
+
     const topPlayers = await this.prisma.playerProfile.findMany({
       where: {
         user: {
           isBot: false,
         },
       },
-      orderBy: { rating: 'desc' },
+      orderBy: orderByClause,
       take: limit,
       select: {
         userId: true,
@@ -36,9 +41,9 @@ export class LeaderboardService {
           select: {
             email: true,
             isBot: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
     // Format for frontend

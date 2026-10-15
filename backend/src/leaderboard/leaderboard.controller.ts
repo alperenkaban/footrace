@@ -6,9 +6,13 @@ export class LeaderboardController {
   constructor(private readonly leaderboardService: LeaderboardService) {}
 
   @Get()
-  async getGlobalLeaderboard(@Query('limit') limitStr?: string) {
+  async getGlobalLeaderboard(
+    @Query('limit') limitStr?: string,
+    @Query('type') type?: 'rating' | 'wins',
+  ) {
     const limit = limitStr ? parseInt(limitStr, 10) : 50;
-    const data = await this.leaderboardService.getGlobalLeaderboard(limit);
-    return { success: true, data };
+    const sortType = type === 'wins' ? 'wins' : 'rating';
+    const data = await this.leaderboardService.getGlobalLeaderboard(limit, sortType);
+    return { success: true, data, type: sortType };
   }
 }

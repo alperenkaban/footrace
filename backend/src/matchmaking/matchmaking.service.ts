@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service.js';
 import { GamesService } from '../games/games.service.js';
 import { WalletService } from '../wallet/wallet.service.js';
@@ -7,8 +7,9 @@ import { BotService } from '../bot/bot.service.js';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
-export class MatchmakingService {
+export class MatchmakingService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(MatchmakingService.name);
+  private queueCheckInterval?: NodeJS.Timeout;
 
   constructor(
     private readonly redisService: RedisService,
@@ -17,6 +18,62 @@ export class MatchmakingService {
     private readonly prisma: PrismaService,
     private readonly botService: BotService,
   ) {}
+
+  onModuleInit() {
+    // Her 3 saniyede bir kuyrukları denetle; 12 saniyeyi geçen oyuncuları botlarla odaya al
+    this.queueCheckInterval = setInterval(async () => {
+      try {
+        await this.checkStaleQueues();
+      } catch (err) {
+        this.logger.warn(`Error in queue check interval: ${(err as Error).message}`);
+      }
+    }, 3000);
+  }
+
+  onModuleDestroy() {
+    if (this.queueCheckInterval) {
+      clearInterval(this.queueCheckInterval);
+    }
+  }
+
+  /**
+   * Kuyrukta 12 saniyeden uzun süre bekleyen oyuncuları tespit edip botlarla oyunu başlatır.
+   */
+  private async checkStaleQueues() {
+    const modes = ['classic_10', 'quick_2'];
+    const now = Date.now();
+
+    for (const modeId of modes) {
+      const queueName = `matchmaking_queue:${modeId}`;
+      const players = await this.redisService.dequeuePlayers(queueName, 20, false);
+      if (!players.length) continue;
+
+      let hasStalePlayer = false;
+      for (const pid of players) {
+        const joinTimeStr = await this.redisService.get(`player_queue_time:${pid}`);
+        const joinTime = joinTimeStr ? parseInt(joinTimeStr, 10) : now;
+        if (now - joinTime >= 12000) {
+          hasStalePlayer = true;
+          break;
+        }
+      }
+
+      // Oyuncuları kuyruğa geri koy
+      for (const pid of players) {
+        await this.redisService.enqueuePlayer(queueName, pid);
+      }
+
+      if (hasStalePlayer) {
+        const mode = await this.prisma.gameMode.findUnique({ where: { name: modeId } });
+        await this.backfillWithBots(modeId, mode?.maxPlayers || (modeId === 'classic_10' ? 10 : 2));
+      }
+    }
+  }
+
+  async forceBackfill(gameModeId: string): Promise<void> {
+    const mode = await this.prisma.gameMode.findUnique({ where: { name: gameModeId } });
+    await this.backfillWithBots(gameModeId, mode?.maxPlayers || (gameModeId === 'classic_10' ? 10 : 2));
+  }
 
   async joinQueue(userId: string, gameModeId: string): Promise<void> {
     const queueName = `matchmaking_queue:${gameModeId}`;
@@ -74,8 +131,9 @@ export class MatchmakingService {
       const holdRes = await this.walletService.holdEntryFee(userId, entryFee, { gameModeId: mode.id });
       const holdId = holdRes?.holdId;
 
-      // Kuyruk ve açık hold takibini Redis'e kaydet
+      // Kuyruk, giriş zamanı ve açık hold takibini Redis'e kaydet
       await this.redisService.set(`player_queue:${userId}`, gameModeId, 3600);
+      await this.redisService.set(`player_queue_time:${userId}`, Date.now().toString(), 3600);
       if (holdId) {
         await this.redisService.set(`player_hold:${userId}`, holdId, 3600);
       }
@@ -86,8 +144,8 @@ export class MatchmakingService {
       const matched = await this.tryMatch(gameModeId, mode.maxPlayers || 2); 
       
       if (!matched) {
-        // Eğer maç anında bulunamadıysa, 2 saniye sonra botlarla doldur
-        setTimeout(() => this.backfillWithBots(gameModeId, mode.maxPlayers || 2), 2000);
+        // En fazla 12 saniye gerçek oyuncu ara, bulunamazsa botlarla odayı başlat (max 15s kuralı)
+        setTimeout(() => this.backfillWithBots(gameModeId, mode.maxPlayers || 2), 12000);
       }
     } finally {
       await this.redisService.del(lockKey);
@@ -144,6 +202,7 @@ export class MatchmakingService {
     // Eşleşen oyuncuların kuyruk durumunu temizle
     for (const p of players) {
       await this.redisService.del(`player_queue:${p}`);
+      await this.redisService.del(`player_queue_time:${p}`);
     }
 
     // Odayı Redis'te başlat
@@ -167,6 +226,7 @@ export class MatchmakingService {
     const queueName = `matchmaking_queue:${gameModeId}`;
     await this.redisService.removeFromQueue(queueName, userId);
     await this.redisService.del(`player_queue:${userId}`);
+    await this.redisService.del(`player_queue_time:${userId}`);
     
     // Açık hold ID kaydı varsa spesifik olarak o hold'u iade et
     const holdId = await this.redisService.get(`player_hold:${userId}`);

@@ -4,7 +4,9 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useSocket } from "@/providers/SocketProvider";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter, useParams } from "next/navigation";
-import { Loader2, Trophy, Coins, Clock, RotateCcw, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, Trophy, Coins, Clock, RotateCcw, CheckCircle2, XCircle, Sparkles } from "lucide-react";
+import { RewardAdModal } from "@/components/RewardAdModal";
+import { AdBanner } from "@/components/AdBanner";
 
 export default function GamePage() {
   const { user, initialized, isAuthenticated } = useAuthStore();
@@ -22,6 +24,10 @@ export default function GamePage() {
   const [rewards, setRewards] = useState<{ coins: number; ratingChange: number } | null>(null);
   const [isPvE, setIsPvE] = useState<boolean>(false);
   const [finalLeaderboard, setFinalLeaderboard] = useState<any[]>([]);
+
+  // Rewarded Ad Bonus State
+  const [showAdModal, setShowAdModal] = useState(false);
+  const [bonusClaimed, setBonusClaimed] = useState(false);
 
   // BUG FIX: track answered state separately to prevent double-submit
   const [isAnswered, setIsAnswered] = useState(false);
@@ -300,11 +306,37 @@ export default function GamePage() {
     return null;
   };
 
+  const handleClaimBonusAd = async () => {
+    try {
+      const authState = useAuthStore.getState();
+      const token = authState.accessToken;
+      const userId = authState.user?.id;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://footrace-6lnc.onrender.com'}/shop/claim-ad-reward`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      if (data.data?.balance !== undefined) {
+        useAuthStore.getState().updateWallet(data.data.balance, user?.heldBalance || 0);
+        setBonusClaimed(true);
+      } else if (data.newBalance !== undefined) {
+        useAuthStore.getState().updateWallet(data.newBalance, user?.heldBalance || 0);
+        setBonusClaimed(true);
+      }
+    } catch (err) {
+      console.error('Error claiming game bonus:', err);
+    }
+  };
+
   // GAME FINISHED SCREEN
   if (gameState === "FINISHED") {
     const isWinner = winner === user?.id;
     return (
-      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-6 py-12">
         <div className="w-full max-w-sm bg-white/5 backdrop-blur-xl rounded-3xl p-6 border border-white/10 flex flex-col items-center shadow-2xl">
           {/* Winner Icon & Header */}
           <div 
@@ -356,7 +388,7 @@ export default function GamePage() {
           )}
 
           {/* Leaderboard */}
-          <div className="w-full bg-black/40 rounded-2xl p-4 border border-white/5 mb-6">
+          <div className="w-full bg-black/40 rounded-2xl p-4 border border-white/5 mb-4">
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
               Maç Sıralaması ({finalLeaderboard.length || Object.keys(scores).length} Oyuncu)
             </h3>
@@ -404,22 +436,50 @@ export default function GamePage() {
             </div>
           </div>
 
+          {/* Rewarded Ad Bonus Button */}
+          {!bonusClaimed ? (
+            <button
+              onClick={() => setShowAdModal(true)}
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-yellow-500/20 border border-amber-500/40 hover:border-amber-400 text-amber-300 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-amber-500/30 transition-all shadow-md group mb-3 active:scale-98"
+            >
+              <Sparkles size={16} className="text-amber-400 group-hover:rotate-12 transition-transform" />
+              <span>+50 Bonus Coin Kazan (Kısa Reklam İzle)</span>
+            </button>
+          ) : (
+            <div className="w-full py-2.5 px-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center justify-center gap-1.5 mb-3">
+              <CheckCircle2 size={16} />
+              <span>+50 Bonus Coin Hesabınıza Eklendi!</span>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="w-full flex flex-col gap-2.5">
             <button
               onClick={() => router.push('/lobby')}
-              className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95"
             >
               <RotateCcw size={18} />
               <span>Tekrar Oyna</span>
             </button>
             <button
               onClick={() => router.push('/lobby')}
-              className="w-full py-3 bg-white/5 hover:bg-white/10 text-gray-300 font-semibold rounded-xl border border-white/10 transition-colors"
+              className="w-full py-3 bg-white/5 hover:bg-white/10 text-gray-300 font-semibold rounded-xl border border-white/10 transition-colors active:scale-95"
             >
               Lobiye Dön
             </button>
           </div>
+
+          {/* Sponsor / Ad Banner */}
+          <AdBanner placement="game" className="mt-4" />
+
+          {/* Rewarded Ad Modal */}
+          <RewardAdModal
+            isOpen={showAdModal}
+            onClose={() => setShowAdModal(false)}
+            onReward={handleClaimBonusAd}
+            rewardAmount={50}
+            title="Maç Sonu Bonus Reklamı"
+          />
         </div>
       </div>
     );

@@ -858,4 +858,52 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
     this.logger.log(`[Reconciliation] Finished. Aborted: ${abortedCount}, Refunded: ${refundedCount}`);
     return { abortedCount, refundedCount };
   }
+
+  /**
+   * Kullanıcıya mağaza satın alımı veya ödüllü reklam izleme sonrasında coin yükler.
+   */
+  async creditCoins(
+    userId: string,
+    amount: number,
+    referenceId: string,
+    type: string = 'SHOP_PURCHASE',
+  ): Promise<{ balance: number; heldBalance: number }> {
+    if (amount <= 0) {
+      throw new BadRequestException('Yüklenecek miktar 0 dan büyük olmalıdır');
+    }
+
+    return this.withUserLock(userId, async () => {
+      return await this.prisma.$transaction(async (tx) => {
+        const profile = await tx.playerProfile.findUnique({
+          where: { userId },
+          select: { balance: true, heldBalance: true },
+        });
+
+        if (!profile) {
+          throw new BadRequestException('Kullanıcı profili bulunamadı');
+        }
+
+        const updated = await tx.playerProfile.update({
+          where: { userId },
+          data: {
+            balance: { increment: amount },
+          },
+        });
+
+        await tx.coinTransaction.create({
+          data: {
+            userId,
+            amount,
+            type,
+            referenceId,
+            balanceBefore: profile.balance,
+            balanceAfter: updated.balance,
+          },
+        });
+
+        this.logger.log(`Credited ${amount} coins to ${userId} (Ref: ${referenceId}, Type: ${type}, New Balance: ${updated.balance})`);
+        return { balance: updated.balance, heldBalance: updated.heldBalance };
+      });
+    });
+  }
 }
