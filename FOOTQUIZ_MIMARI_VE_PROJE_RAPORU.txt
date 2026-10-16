@@ -2,10 +2,10 @@
            FOOTQUIZ - DETAYLI MIMARI, SISTEM VE PROJE GELISIM RAPORU
 ================================================================================
 Hazirlayan: Nova (AI Pair Programmer)
-Tarih: 12 Ekim 2026
+Tarih: 16 Ekim 2026
 Proje Deposu: https://github.com/alperenkaban/footrace
-Calisma Alani: c:\Users\Alperen\Desktop\Footquiz
-Sürüm: 1.4.0 (E2E MVP Kabul Denetimi Tamamlandı - Sınırlı Beta Hazır)
+Calisma Alani: c:\Users\Alperen\Desktop\Footrace
+Sürüm: 1.5.0 (IAP Store, Kademeli Bütçe Lobileri, Canlı Testler ve Vercel/GitHub Senkronizasyonu)
 
 ================================================================================
 BOLUM 1: PROJE VE SISTEM MIMARISI (ARCHITECTURE OVERVIEW)
@@ -350,6 +350,129 @@ Sürüm: 1.2.0 (Canliya Gecis Kapisi / Pre-Production Certified)
   * Kapalı kullanıcı testleri için oynanabilir, güvenli ve tutarlıdır; genel kamuya açık canlı lansmandan
     önce listelenen P1 iyileştirmelerinin tamamlanması önerilir.
 
+
+================================================================================
+BOLUM 5: SURUM 1.4.1 - 10 KISILIK ESLESTIRME VE CANLI SISTEM IYILESTIRMELERI
+================================================================================
+Tarih: 15 Ekim 2026
+Surum: 1.4.1 (Matchmaking Hotfix & Self-Healing Resilience)
+
+1. ISTEMCI TEPKISIZLIGI VE WEBSOCKET COZUMU
+--------------------------------------------
+- Sorun: Frontend'de `transports: ['websocket']` direkt zorlandiginda, tarayici ile Render backend
+  arasindaki ilk el sikisma 3-5 saniye gecikiyor veya bazi aglarda bloklaniyordu.
+  Kullanici lobi butonuna tikladiginda socket henuz bagli olmadigi icin tiklama bosa dusuyor,
+  hicbir hata mesaji veya geri bildirim gorunmuyordu.
+- Cozum:
+  * `SocketProvider`: `transports: ['polling', 'websocket']` seklinde guncellendi. Aninda HTTP uzerinden
+    baglanip ardindan sorunsuz WebSocket yukseltmesi saglandi.
+  * `LobbyPage`: Butona `SUNUCUYA BAGLANILIYOR...` spinner animasyonu, tıklandığında anlık iyimser
+    (optimistic) `Odaya baglaniliyor...` durumu ve anlık geri bildirim eklendi.
+
+2. RENDER / CANLI DATABASE ICIN KENDINI IYILESTIRME (SELF-HEALING BOOTSTRAP)
+-----------------------------------------------------------------------------
+- Sorun: Canli Render sunucusunda calisan PostgreSQL veritabaninda bazi migration'lar
+  veya seed verileri (ozellikle `classic_10` modu, botlar veya sorular) eksik kaldiginda,
+  oyuncu kuyrukta kaliyor ve bot backfill sessizce cokuyordu.
+- Cozum:
+  * `DbBootstrapService`: NestJS `OnApplicationBootstrap` kancasinda otomatik devreye giren
+    dayanikli bir servis yazildi.
+  * Kontroller:
+    1) `GameMode` tablosunda `quick_2` ve `classic_10` varligini kontrol eder, yoksa aninda olusturur.
+    2) En az 20 bot hesabini ve cuzdanlarini dogrular, eksikse uretir.
+    3) Futbol sorulari ve versiyonlarini dogrular.
+    4) `MatchHold` tablosunu ve `CoinTransaction` unique indeksini calisma aninda garanti eder.
+  * `package.json` (`start:prod`): `prisma migrate deploy && node dist/main` zinciri ile otomatiklestirildi.
+
+3. BOT SERVICE DINAMIK YEDEKLEME (DYNAMIC FALLBACK)
+---------------------------------------------------
+- `BotService.getAvailableBots`: Veritabaninda tanimli bot sayisi 10 kisi icin yetersiz kalsa dahi,
+  sistem bellekte dinamik bot profilleri (`bot_fallback_*`) uretip maçı eksiksiz 10 kisiye tamamlar.
+
+
+================================================================================
+BOLUM 6: SURUM 1.5.0 - IAP MAGAZASI, KADEMELI BUTCE LOBILERI VE CANLI VERIFICATION
+================================================================================
+Tarih: 16 Ekim 2026
+Surum: 1.5.0 (In-App Purchases, Budget Tier Lobbies, StoreKit/Google Play, Vercel Production)
+
+1. UYGULAMA ICI SATIN ALIM (IN-APP PURCHASES - IAP) VE VIP PAS
+--------------------------------------------------------------
+Mobil ve web platformlarina hazirlik kapsaminda Google Play ve Apple App Store standartlarina
+tam uyumlu magaza mimarisi kuruldu:
+
+- Urun Katalogu:
+  * `com.footquiz.coins.100` (100 Coin - 19.99 TL)
+  * `com.footquiz.coins.500` (550 Coin [%10 Bonus] - 89.99 TL)
+  * `com.footquiz.coins.1200` (1,400 Coin [%15 Bonus] - 199.99 TL)
+  * `com.footquiz.coins.3000` (3,800 Coin [%25 Bonus] - 449.99 TL)
+  * `com.footquiz.vip.monthly` (VIP Pass Aylik Abonelik - 149.99 TL)
+
+- Backend Servisi (`backend/src/shop/shop.service.ts` & `shop.controller.ts`):
+  * `verifyGooglePlayPurchase`: Google Play Billing makbuzlarini cozer, orderId idempotency kontrolu yapar.
+  * `verifyAppleAppStorePurchase`: Apple StoreKit 2 JWS token dogrulama mantigini isletir.
+  * `restorePurchases`: Apple App Store Guideline 3.1.1 geregi zorunlu olan satin alimlari geri yukleme akisi.
+  * Anti-Replay Guvenligi: `CoinTransaction.referenceId` uzerinden cift harcama (double-spend) ve
+    ayni makbuzun tekrar tekrar gonderilmesi (replay attack) %100 engellendi.
+  * VIP Abonelik Yonetimi: Redis uzerinde TTL'li anahtar (`user_vip:${userId}`) ile VIP statu takibi,
+    2x XP/RP carpani, ozel altin tac rozeti ve gunluk ucretsiz +100 coin alma hakki eklendi.
+
+- Frontend Bilesenleri (`frontend/src/app/shop/page.tsx` & modals):
+  * `IapModal`: Apple StoreKit 2 (iOS Face ID, Apple ID sheet) ve Android Google Play Billing (GPay)
+    arayuz tasarimlari birebir canlandirildi. Magaza platform secicisi (Apple / Google) eklendi.
+  * `LegalTermsModal`: Apple ve Google magazaya kabul kriteri olan EULA (Kullanim Kosullari) ve
+    Gizlilik Politikasi modal penceresi hazirlandi.
+  * Odule Dayali Reklam (Rewarded Ad): 30 saniyelik reklam izleme simulasyonu ile +25 coin odul eklendi.
+
+2. KADEMELI BUTCE LOBILERI (TIERED BUDGET LOBBIES)
+--------------------------------------------------
+Kullanicinin "farkli butceler icin farkli lobiler yapalim mesela giris 500 odul 4500" talebi
+dogrultusunda 4 farkli ekonomik kademe olusturuldu:
+
+- 10 Kisilik Klasik Maclar:
+  * 🥉 Bronz Lobi:  100 Coin Giris ->  900 Coin Odul (`classic_10`)
+  * 🥈 Gumus Lobi:  250 Coin Giris -> 2250 Coin Odul (`classic_10_silver`)
+  * 🥇 Altin Lobi:  500 Coin Giris -> 4500 Coin Odul (`classic_10_gold`)
+  * 💎 Elmas Lobi: 1000 Coin Giris -> 9000 Coin Odul (`classic_10_diamond`)
+
+- 2 Kisilik Hizli Duellolar:
+  * 🥉 Bronz Duello:  100 Coin Giris ->  180 Coin Odul (`quick_2`)
+  * 🥈 Gumus Duello:  250 Coin Giris ->  450 Coin Odul (`quick_2_silver`)
+  * 🥇 Altin Duello:  500 Coin Giris ->  900 Coin Odul (`quick_2_gold`)
+  * 💎 Elmas Duello: 1000 Coin Giris -> 1800 Coin Odul (`quick_2_diamond`)
+
+- Otomatik Bot Destegi (15 Saniye Kurali):
+  * `MatchmakingService.checkStaleQueues`: Veritabanindaki tum aktif modlari dinamik tarayacak sekilde
+    genisletildi. Hangi lobide beklenirse beklensin, 12-15 saniye icinde insan rakip bulunamazsa
+    oda otomatik botlarla doldurulup mac baslatilir.
+- Lobi Arayuzu (`frontend/src/app/lobby/page.tsx`):
+  * Format secicisi (10 Kisilik Klasik vs 2 Kisilik Hizli) ve 4 kademeli bütçe secim kartlari yerlestirildi.
+  * Bakiye yetersizse buton kilitlenip kirmizi uyari ve "Mağazadan Coin Al" baglantisi gosterilir.
+
+3. CIFTLI LIDERLIK TABLOSU (DUAL LEADERBOARD)
+---------------------------------------------
+- `frontend/src/app/leaderboard/page.tsx`:
+  * "Haftalik Kazananlar (Coin)" ve "Genel Derece (RP)" olmak uzere cift sekmeli gosterim eklendi.
+  * Ilk 3 siradaki oyuncuya altin, gumus, bronz taclar ve ozel avatarlar verildi.
+
+4. SISTEM TESTLERI VE VERIFIKASYON
+----------------------------------
+- Vitest Birim & Entegrasyon: 8 test dosyasi, 61/61 test GEÇTİ (%100).
+- Frontend Production Build: `npm run build` (Turbopack, Next.js 16) 0 hata ile 8 rotayi derledi.
+- Canli Tarayici (DOM) Denetimi:
+  * http://localhost:4001 uzerinde subagent ile otomatik test kosuldu.
+  * Lobi mod degisimi (Bronz, Gumus, Altin, Elmas), 10P / 2P gecisleri,
+  * Magaza IAP modal acilisi (Apple StoreKit & Google Play),
+  * EULA / Yasal kosullar penceresi,
+  * Cift sekmeli liderlik tablosu basariyla goruntulendi ve dogrulandi.
+  * Tarayici kayit kaniti: `test_footquiz_ui_1792103496189.webp`
+
+5. GITHUB VE VERCEL DEPLOYMENT SENKRONIZASYONU
+----------------------------------------------
+- Tum kod degisiklikleri `main` dalina commitlendi ve `origin main`e pushlandi.
+- Vercel entegrasyonu tetiklendi. Monorepo yapisinda Root Directory: `frontend` ayari ile
+  uretim dagitimi aktif edildi.
+
 ===============================================================================
-[RAPOR SONU - NOVA TARAFINDAN KAYDEDILDI - SURUM 1.4.0 - MVP KABUL DENETIMI TAMAMLANDI]
+[RAPOR SONU - NOVA TARAFINDAN GUNCELI KAYDEDILDI - SURUM 1.5.0 TAMAMLANDI]
 ===============================================================================

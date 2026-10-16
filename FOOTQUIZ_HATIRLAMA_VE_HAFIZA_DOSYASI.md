@@ -1,7 +1,7 @@
 # FOOTQUIZ — PROJE HAFIZA VE HATIRLAMA DOSYASI (CHECKPOINT)
 
 > **Asistan:** Nova  
-> **Tarih:** 15 Ekim 2026  
+> **Tarih:** 16 Ekim 2026  
 > **Konum:** Kök Dizin (`c:\Users\Alperen\Desktop\Footrace\FOOTQUIZ_HATIRLAMA_VE_HAFIZA_DOSYASI.md`)  
 > **Bağlı Mimari Rapor:** `c:\Users\Alperen\Desktop\Footrace\FOOTQUIZ_MIMARI_VE_PROJE_RAPORU.txt`  
 > **Mevcut Sürüm Durumu:** Sürüm 1.5.0 — Google Play & App Store IAP, Kademeli Bütçe Lobileri (500 Giriş / 4500 Ödül), Canlı Testler ve Vercel Güncellemesi
@@ -64,10 +64,11 @@ Bu değişmezler asla ihlal edilemez ve her geliştirmede korunmalıdır:
 
 | Test Kategorisi | Test Dosyası | Başarılı / Toplam | Başarı Oranı |
 | :--- | :--- | :--- | :--- |
-| **Gerçek Altyapı Eşzamanlılık Testleri** | [backend/test-real-infra.ts](file:///c:/Users/Alperen/Desktop/Footquiz/backend/test-real-infra.ts) | **20 / 20** | **%100** |
-| **Uçtan Uca MVP Kabul Testleri** | [backend/test-e2e-mvp-audit.ts](file:///c:/Users/Alperen/Desktop/Footquiz/backend/test-e2e-mvp-audit.ts) | **10 / 10** | **%100** |
+| **Gerçek Altyapı Eşzamanlılık Testleri** | [backend/test-real-infra.ts](file:///c:/Users/Alperen/Desktop/Footrace/backend/test-real-infra.ts) | **20 / 20** | **%100** |
+| **Uçtan Uca MVP Kabul Testleri** | [backend/test-e2e-mvp-audit.ts](file:///c:/Users/Alperen/Desktop/Footrace/backend/test-e2e-mvp-audit.ts) | **10 / 10** | **%100** |
 | **Vitest Birim ve Eşzamanlılık Testleri** | `npm test` (8 test dosyası) | **61 / 61** | **%100** |
 | **Derleme Doğrulaması** | `npm run build` | **0 Hata** | **%100** |
+
 
 ---
 
@@ -135,7 +136,7 @@ Kamuya açık genel canlı lansmandan önce çözülecek maddeler ve hazır uygu
 ## 6. Proje Dizin Yapısı Hatırlatması
 
 ```text
-Footquiz/
+Footrace/
 ├── FOOTQUIZ_MIMARI_VE_PROJE_RAPORU.txt       <- Ayrıntılı mimari ve proje gelişim raporu
 ├── FOOTQUIZ_HATIRLAMA_VE_HAFIZA_DOSYASI.md   <- Bu hafıza ve checkpoint dosyası (KÖK DİZİNDE)
 ├── docker-compose.yml                        <- Postgres (5433) ve Redis (6379)
@@ -147,12 +148,16 @@ Footquiz/
 │   │   ├── matchmaking/                      <- MatchmakingService (queues, bot backfill, locks)
 │   │   ├── games/                            <- GamesService, QuestionSelector, ScoringEngine
 │   │   ├── gateway/                          <- GameGateway (WebSockets)
-│   │   ├── bot/                              <- BotService (20 bot profili, simüle cevaplar)
+│   │   ├── bot/                              <- BotService (20 bot profili, dinamik fallback)
+│   │   ├── shop/                             <- ShopService & ShopController (IAP, VIP pass, restore)
+│   │   ├── leaderboard/                      <- LeaderboardService (Haftalık kazananlar & RP)
+│   │   ├── prisma/                           <- DbBootstrapService (Self-healing on startup)
 │   │   └── redis/                            <- RedisService (ioredis wrapper)
 │   ├── test-real-infra.ts                    <- 20 senaryolu gerçek PostgreSQL + Redis testi
 │   └── test-e2e-mvp-audit.ts                 <- 10 senaryolu gerçek uçtan uca MVP testi
 └── frontend/
-    ├── src/app/                              <- Next.js App Router (lobby, game/[roomId], login)
+    ├── src/app/                              <- Next.js App Router (lobby, game/[roomId], login, shop, leaderboard)
+    ├── src/components/                       <- IapModal, LegalTermsModal, Navbar, QuestionCard
     └── src/store/                            <- Zustand useAuthStore
 ```
 
@@ -170,6 +175,7 @@ Footquiz/
   - `BotService.getAvailableBots`: Yetersiz bot durumunda anında dinamik bot üretme fallback'i eklendi (10 kişilik maçlar asla eksik kalmaz).
   - `SocketProvider`: `transports: ['polling', 'websocket']` yapılarak anında HTTP bağlantısı ve pürüzsüz WS yükseltmesi sağlandı.
   - `LobbyPage`: Butona `SUNUCUYA BAĞLANILIYOR...` spinner göstergesi, optimistik `Odaya bağlanılıyor...` anlık durum geçişi ve buton tıklama geribildirimi eklendi.
+
 ---
 
 ## 8. Sürüm 1.5.0 — Google Play & App Store IAP, Kademeli Bütçe Lobileri ve Vercel Güncellemesi (16 Ekim 2026)
@@ -181,6 +187,7 @@ Footquiz/
   - Satın Alımları Geri Yükle (Restore Purchases): Apple App Store Guideline 3.1.1 şartı gereği `restorePurchases` akışı ve arayüz butonu eklendi.
   - Gerçekçi Mobil Arayüzler: iOS StoreKit 2 (Face ID / Apple ID sheet) ve Android Google Play Billing modal tasarımları oluşturuldu.
   - Yasal Uyumluluk (Legal & Compliance): Apple/Google yönergelerine uygun Kullanım Koşulları (EULA) ve Gizlilik Politikası modalı (`LegalTermsModal`) entegre edildi.
+  - Ödüllü Reklam (Rewarded Ad): Reklam izleme simülasyonu ile +25 coin kazanma mekaniği eklendi.
 
 - **Kademeli Bütçe Lobileri (Tiered Budget Lobbies):**
   - Kullanıcı isteği doğrultusunda 4 farklı giriş bütçesi ve ödül havuzu tanımlandı:
@@ -192,11 +199,56 @@ Footquiz/
   - `MatchmakingService`: 15 saniye zaman aşımında botlarla otomatik tamamlama (`checkStaleQueues`) tüm modları kapsayacak şekilde optimize edildi.
   - `LobbyPage`: 10 Oyunculu ve 2 Oyunculu format seçicisi, 4 kademeli bütçe kartı ve bakiye yetersizliği uyarıları eklendi.
 
+- **Çift Sekmeli Liderlik Tablosu (Leaderboard):**
+  - "Haftalık Kazananlar (Coin)" ve "Genel Derece (RP)" olmak üzere çift sekmeli modern kart tasarımı.
+  - Botlar rekabetçi liderlik tablosundan tamamen filtrelendi (`isBot: false`).
+
 - **Test ve Kalite Güvencesi:**
   - 61 backend Vitest testi (%100 başarı) doğrulandı.
   - Frontend Turbopack production derlemesi (`npm run build`) sıfır hata ile tamamlandı.
-  - Tarayıcı alt ajanı ile tüm lobi, mağaza, IAP modal ve liderlik tablosu akışları canlı DOM üzerinde test edildi.
+  - Tarayıcı alt ajanı ile tüm lobi, mağaza, IAP modal ve liderlik tablosu akışları canlı DOM üzerinde test edildi (Kayıt: `test_footquiz_ui_1792103496189.webp`).
+
+- **Dağıtım (Deployment):**
+  - Kodlar `https://github.com/alperenkaban/footrace.git` `main` dalına pushlandı (Son commit: `1d57cef`).
+  - Vercel GitHub entegrasyonu üzerinden otomatik derleme tetiklendi.
+
+---
+
+## 9. Gelecek Oturumlarda Yerel Başlatma ve Hızlı Sorun Giderme Rehberi
+
+1. **Docker Servisleri (PostgreSQL & Redis):**
+   ```powershell
+   # Docker çalışmıyorsa önce Docker Desktop'ı başlatın:
+   explorer.exe "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+   # Ardından servisleri kaldırın:
+   docker compose up -d
+   ```
+   * PostgreSQL: Port 5433 (`localhost:5433`, db: `footquiz`)
+   * Redis: Port 6379 (`localhost:6379`)
+
+2. **Backend Başlatma:**
+   ```powershell
+   cd c:\Users\Alperen\Desktop\Footrace\backend
+   npm run start:dev
+   # Backend http://localhost:4000 üzerinde ayağa kalkar
+   ```
+
+3. **Frontend Başlatma:**
+   ```powershell
+   cd c:\Users\Alperen\Desktop\Footrace\frontend
+   npm run dev
+   # Frontend http://localhost:4001 üzerinde açılır
+   ```
+
+4. **"SUNUCUYA BAĞLANILIYOR..." veya Eşleşmeme Sorunu Çözümü:**
+   - Lobi butonunda "SUNUCUYA BAĞLANILIYOR..." yazıyorsa ve tıklayınca uyarı veriyorsa, Docker servisleri veya port 4000'deki backend kapalıdır.
+   - Çözüm: Yukarıdaki adımlarla Docker ve `npm run start:dev` başlatıldığında buton anında yeşile dönüp aktif hale gelir.
+
+5. **Vercel Proje Ayarları (Monorepo):**
+   - **Root Directory:** `frontend`
+   - **Environment Variables:** `NEXT_PUBLIC_API_URL` -> Canlı backend URL'i (örn. `https://footrace-6lnc.onrender.com`).
 
 ===============================================================================
 [HAFIZA DOSYASI SONU — NOVA — SÜRÜM 1.5.0 — CHECKPOINT KAYDEDİLDİ]
 ===============================================================================
+
