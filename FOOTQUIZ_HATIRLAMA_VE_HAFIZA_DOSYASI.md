@@ -4,8 +4,7 @@
 > **Tarih:** 15 Ekim 2026  
 > **Konum:** Kök Dizin (`c:\Users\Alperen\Desktop\Footrace\FOOTQUIZ_HATIRLAMA_VE_HAFIZA_DOSYASI.md`)  
 > **Bağlı Mimari Rapor:** `c:\Users\Alperen\Desktop\Footrace\FOOTQUIZ_MIMARI_VE_PROJE_RAPORU.txt`  
-> **Git Deposu:** `https://github.com/alperenkaban/footrace.git` (Branch: `main`)  
-> **Mevcut Sürüm Durumu:** Sürüm 1.4.1 — 10 Kişilik Eşleştirme & Canlı İstemci Tepki İyileştirmesi (Matchmaking Hotfix Ready)
+> **Mevcut Sürüm Durumu:** Sürüm 1.5.0 — Google Play & App Store IAP, Kademeli Bütçe Lobileri (500 Giriş / 4500 Ödül), Canlı Testler ve Vercel Güncellemesi
 
 ---
 
@@ -171,8 +170,33 @@ Footquiz/
   - `BotService.getAvailableBots`: Yetersiz bot durumunda anında dinamik bot üretme fallback'i eklendi (10 kişilik maçlar asla eksik kalmaz).
   - `SocketProvider`: `transports: ['polling', 'websocket']` yapılarak anında HTTP bağlantısı ve pürüzsüz WS yükseltmesi sağlandı.
   - `LobbyPage`: Butona `SUNUCUYA BAĞLANILIYOR...` spinner göstergesi, optimistik `Odaya bağlanılıyor...` anlık durum geçişi ve buton tıklama geribildirimi eklendi.
-  - Eşleştirme süresi 3s'den 2s'ye optimize edildi.
+---
+
+## 8. Sürüm 1.5.0 — Google Play & App Store IAP, Kademeli Bütçe Lobileri ve Vercel Güncellemesi (16 Ekim 2026)
+
+- **Uygulama İçi Satın Alım (In-App Purchases - IAP):**
+  - `ShopService` & `ShopController`: Google Play (`verifyGooglePlayPurchase`) ve Apple StoreKit 2 (`verifyAppleAppStorePurchase`) makbuz doğrulama mimarisi kuruldu.
+  - İdempotency & Anti-Replay: `referenceId` ile çift harcama ve sahte makbuz koruması sağlandı.
+  - VIP Pass Aboneliği: Redis tabanlı TTL abonelik yönetimi (`user_vip:${userId}`), 2x XP/RP, altın isim rozeti ve günlük +100 bonus coin eklendi.
+  - Satın Alımları Geri Yükle (Restore Purchases): Apple App Store Guideline 3.1.1 şartı gereği `restorePurchases` akışı ve arayüz butonu eklendi.
+  - Gerçekçi Mobil Arayüzler: iOS StoreKit 2 (Face ID / Apple ID sheet) ve Android Google Play Billing modal tasarımları oluşturuldu.
+  - Yasal Uyumluluk (Legal & Compliance): Apple/Google yönergelerine uygun Kullanım Koşulları (EULA) ve Gizlilik Politikası modalı (`LegalTermsModal`) entegre edildi.
+
+- **Kademeli Bütçe Lobileri (Tiered Budget Lobbies):**
+  - Kullanıcı isteği doğrultusunda 4 farklı giriş bütçesi ve ödül havuzu tanımlandı:
+    * 🥉 **Bronz Lobi:** 100 Coin Giriş / 900 Coin Ödül (10 Oyunculu) | 100 Giriş / 180 Ödül (2 Oyunculu)
+    * 🥈 **Gümüş Lobi:** 250 Coin Giriş / 2250 Coin Ödül (10 Oyunculu) | 250 Giriş / 450 Ödül (2 Oyunculu)
+    * 🥇 **Altın Lobi:** 500 Coin Giriş / 4500 Coin Ödül (10 Oyunculu) | 500 Giriş / 900 Ödül (2 Oyunculu)
+    * 💎 **Elmas Lobi:** 1000 Coin Giriş / 9000 Coin Ödül (10 Oyunculu) | 1000 Giriş / 1800 Ödül (2 Oyunculu)
+  - `DbBootstrapService` & `seed.ts`: Tüm 8 oyun modu veritabanında dinamik bootstrap ile güvenceye alındı.
+  - `MatchmakingService`: 15 saniye zaman aşımında botlarla otomatik tamamlama (`checkStaleQueues`) tüm modları kapsayacak şekilde optimize edildi.
+  - `LobbyPage`: 10 Oyunculu ve 2 Oyunculu format seçicisi, 4 kademeli bütçe kartı ve bakiye yetersizliği uyarıları eklendi.
+
+- **Test ve Kalite Güvencesi:**
+  - 61 backend Vitest testi (%100 başarı) doğrulandı.
+  - Frontend Turbopack production derlemesi (`npm run build`) sıfır hata ile tamamlandı.
+  - Tarayıcı alt ajanı ile tüm lobi, mağaza, IAP modal ve liderlik tablosu akışları canlı DOM üzerinde test edildi.
 
 ===============================================================================
-[HAFIZA DOSYASI SONU — NOVA — SÜRÜM 1.4.1 — CHECKPOINT KAYDEDİLDİ]
+[HAFIZA DOSYASI SONU — NOVA — SÜRÜM 1.5.0 — CHECKPOINT KAYDEDİLDİ]
 ===============================================================================
