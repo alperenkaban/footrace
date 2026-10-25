@@ -1,478 +1,828 @@
 ================================================================================
-           FOOTQUIZ - DETAYLI MIMARI, SISTEM VE PROJE GELISIM RAPORU
+           FOOTQUIZ - DETAYLI MIMARI, SISTEM VE PROJE MASTER RAPORU
 ================================================================================
-Hazirlayan: Nova (AI Pair Programmer)
-Tarih: 16 Ekim 2026
+Hazirlayan: Nova (AI Pair Programmer & Senior System Architect)
+Tarih: 26 Ekim 2026
 Proje Deposu: https://github.com/alperenkaban/footrace
 Calisma Alani: c:\Users\Alperen\Desktop\Footrace
-Sürüm: 1.5.0 (IAP Store, Kademeli Bütçe Lobileri, Canlı Testler ve Vercel/GitHub Senkronizasyonu)
+Mevcut Surum: Sürüm 1.5.0 (IAP Store, Kademeli Bütçe Lobileri, Canlı Altyapı Denetimi ve Vercel/Render Prod)
+Bagli Hafiza Dosyasi: c:\Users\Alperen\Desktop\Footrace\FOOTQUIZ_HATIRLAMA_VE_HAFIZA_DOSYASI.md
 
 ================================================================================
-BOLUM 1: PROJE VE SISTEM MIMARISI (ARCHITECTURE OVERVIEW)
+ICINDEKILER
 ================================================================================
-
-1. GENEL BAKIS
---------------
-FootQuiz, oyuncularin canli (real-time) olarak futbol bilgi yarismalarina katildigi,
-mikro-bahis (entry fee ve odul havuzu) mekanigine sahip, rating (RP/Elo) puanlamasi
-ve liderlik tablosu barindiran, WebSocket tabanli cok oyunculu bir platformdur.
-Oyuncular insan rakiplerle veya yeterli oyuncu olmadiginda yapay zeka botlariyla eslesir.
-
-2. TEKNOLOJI YIGINI (TECH STACK)
---------------------------------
-- Backend:
-  * NestJS v12 (Node.js, TypeScript, ESM modulleri)
-  * Socket.io v4.8.4 (WebSocket Gateway)
-  * Prisma ORM v5.22.0
-  * PostgreSQL 15 (Docker container: localhost:5433)
-  * Redis 7 & ioredis v6 (Docker container: localhost:6379)
-  * JWT (Passport-JWT) & OAuth (Google, Facebook stratejileri)
-
-- Frontend:
-  * Next.js 16.3.8 (App Router, Turbopack)
-  * React 19.2.8
-  * TailwindCSS v4 + Ozel cam morfizim (Glassmorphism) stilleri
-  * Lucide React v1.52.0 (Ikonlar)
-  * Zustand v5 (useAuthStore - State Management & LocalStorage persist)
-  * Socket.io-client v4.8.4 (SocketProvider Context)
-
-- Altyapi ve Dagitim:
-  * Local Dev: Docker Desktop (WSL2), Docker Compose, Node dev sunuculari
-  * Production: Vercel (Frontend), Render (Backend), Cloud Postgres & Redis
-
-3. BACKEND MODUL YAPISI VE GOREVLERI
-------------------------------------
-- GatewayModule (GameGateway):
-  * WebSockets sunucusunu ayaga kaldirir.
-  * JWT ile istemci el sikismasi (handshake) kimlik dogrulamasini yapar.
-  * Olaylar: join_matchmaking, leave_matchmaking, join_room, submit_answer.
-  * Odaya yayinlar: match_found, question_started, score_updated, question_ended, game_finished, wallet_updated.
-
-- MatchmakingModule (MatchmakingService):
-  * Redis sirali kumesi (ZSET) ve listeleri ile matchmaking kuyrugunu yonetir.
-  * 5 saniye icinde insan rakip bulunamazsa bot backfill yapar.
-  * Redis `SET NX` kilidi ile coklu bot olusturma yaris durumlarini (race condition) engeller.
-  * Giris ucretini (100 Coin) WalletService uzerinden rezerve eder (heldBalance).
-
-- GamesModule (GamesService):
-  * Odalarin bellek/Redis uzerindeki durumunu (GameState) tutar.
-  * Soru dongusunu yonetir: Geri sayim (3s) -> Soru Baslangici (10s) -> Soru Sonu -> Skor Guncelleme.
-  * Skorlama Formulleri:
-    - MULTIPLE_CHOICE: Dogru cevapta sure bazli hiz bonusu (max 100 puan).
-    - ESTIMATION: Gercek cevaba yakinliga gore oransal puan.
-    - RANKING: Dogru siralanan oge sayisina gore puan.
-  * Mac bitisi: Kazanan/kaybeden belirleme, odul hesaplama (%10 komisyon kesintisi sonrasi odul havuzu), coin transferi.
-
-- WalletModule (WalletService):
-  * Bakiye sorgulama, rezerve etme, dusme ve odul ekleme.
-  * ACID uyumlu PostgreSQL islemleri ve CoinTransaction tablosu.
-  * Idempotency kurali: `[type, referenceId]` benzersizligi ile cift odul dagitimi onlenir.
-
-- BotModule (BotService):
-  * Veritabaninda tanimli 10 farkli bot hesabi (bot1@footquiz.local ... bot10@footquiz.local).
-  * Gercekci gecikme simülasyonu (2-6 saniye arasi yanit suresi) ve basari olasiligi.
-
-4. VERITABANI VE REDIS SEMASI
------------------------------
-- PostgreSQL (Prisma):
-  * User: id, email, isGuest, isBot, createdAt, updatedAt
-  * PlayerProfile: userId, rating (1000), balance, heldBalance, wins, losses
-  * CoinTransaction: userId, amount, type (GAME_REWARD, ENTRY_FEE), referenceId, balanceBefore, balanceAfter
-  * GameMode: name (quick_2), maxPlayers (2), questionCount (3), questionDuration (10s), entryFee (100)
-  * Question & QuestionVersion: text, metadata (options/items/min-max), correctAnswer, type
-  * Match & MatchPlayer: Mac gecmisi ve oyuncu skorlari
-
-- Redis Anahtarlari:
-  * `matchmaking_queue:{gameModeId}`: Kuyruktaki oyuncular
-  * `player_room:{userId}`: Oyuncunun aktif bulundugu oda ID'si
-  * `backfill_lock:{gameModeId}`: Bot ekleme yarisi kilidi (TTL: 5s)
+1.  BOLUM 1: PROJE VİZYONU, PLATFORM AMACI VE URUN STRATEJISI
+2.  BOLUM 2: UC-UCA SISTEM VE TEKNOLOJI MIMARISI (TECH STACK & TOPOLOGY)
+3.  BOLUM 3: VERITABANI VE REDIS SEMASI (DATA MODEL & STATE MACHINES)
+4.  BOLUM 4: P0 EKONOMI GUVENLIGI, MATCHHOLD YASAM DONGUSU VE LEDGER DEGISMEZLERI
+5.  BOLUM 5: CIFT KATMANLI CANLILIK (LIVENESS), HEARTBEAT VE OTOMATIK KURTARMA (RECONCILIATION)
+6.  BOLUM 6: ESLESTIRME (MATCHMAKING) MOTORU, KUYRUKLAR VE BOT EKOSISTEMI
+7.  BOLUM 7: OYUN MOTORU (GAMES SERVICE), SORU SECIMI VE SKORLAMA FORMULLERI
+8.  BOLUM 8: KADEMELI BUTCE LOBILERI (TIERED BUDGET LOBBIES - 8 OYUN MODU)
+9.  BOLUM 9: UYGULAMA ICI SATIN ALIM (IAP), VIP PAS VE MONETIZASYON ALTYAPISI
+10. BOLUM 10: CIFTLI LIDERLIK TABLOSU (DUAL LEADERBOARD) VE DERECELENDIRME
+11. BOLUM 11: KENDINI IYILESTIRME VE DIRENC MIMARISI (SELF-HEALING BOOTSTRAP)
+12. BOLUM 12: DOGRULANMIS TEST METRIKLERI VE KALITE GUVENCESI (QA AUDIT SUITE)
+13. BOLUM 13: GUVENLIK ANALIZI, BULGULAR VE P1/P2 EYLEM RECETELERI
+14. BOLUM 14: GELISTIRICI, DEVOPS VE YEREL BASLATMA OPERASYON KILAVUZU
+15. BOLUM 15: PROJE YOL HARITASI VE GELECEK VIZYONU (ROADMAP)
 
 
 ================================================================================
-BOLUM 2: BU OTURUMDA YAPILAN TUM ISLERIN DETAYLI GECMISI
+BOLUM 1: PROJE VİZYONU, PLATFORM AMACI VE URUN STRATEJISI
 ================================================================================
 
-1. GENIS CAPLI HATA DUZELTMELERI (BUG FIXES)
---------------------------------------------
-Kullanici Bildirimi: "Bazen oynatiyor bazen oynatmiyor sacma sapan hatalar dondurebiliyor genis bir bug fix atip oyunun her kosulda calismasini sagla"
+1.1. GENEL PLATFORM VİZYONU
+FootQuiz, futbol tutkunlarının gerçek zamanlı (real-time) bilgi yarışmalarında birbirleriyle
+karşılaştığı, mikro-bahis (entry fee ve ödül potu) mekaniğine sahip, rekabetçi derecelendirme
+(Elo/RP Rating) ve liderlik tablosu barındıran, WebSocket tabanlı modern bir web/mobil platformudur.
 
-Yapilan Duzeltmeler:
-a) Frontend SocketProvider Re-render Sorunu (KRITIK):
-   - Hata: Socket yalnizca `useRef` icinde tutuldugu icin soket baglandiginda React re-render tetiklemiyordu. Bu yuzden Lobby ve Game sayfalarinda `socket` null kaliyordu ve sayfa yenilenene kadar "Socket bagli degil" hatasi veriyordu.
-   - Cozum: `useState<Socket>` eklendi. Socket olustugunda `setSocket(newSocket)` cagrilarak tum alt bilesenlerin reaktif olarak guncellenmesi saglandi.
+Platformun temel felsefesi:
+- "Hızlı, Adil ve Heyecanlı": Maçlar 1-2 dakika içinde başlar, soru döngüleri kesintisiz akar.
+- "Finansal Olarak Güvenli": Kullanıcı bakiyeleri ACID standartlarında korunur, karşılıksız coin üretilmez.
+- "Her Cihazda Pürüzsüz": Masaüstü tarayıcılardan mobil ekranlara kadar cam-morfik (glassmorphic)
+  ve akıcı 60 FPS görsel deneyim sunar.
 
-b) Frontend Game Sayfasi Zamanlayici ve Cift Istek Sorunlari:
-   - Hata: `setInterval` temizlenmedigi icin soru degisimlerinde sayaçlar ust uste biniyor, hizlaniyor veya 0'da donuyordu.
-   - Hata: Kullanici siklara arka arkaya tiklayinca cift `submit_answer` gidiyordu.
-   - Hata: `result.score` sunucudan gelmiyordu, dogrusu `result.scoreGained` idi.
-   - Hata: Sunucu ile istemci saati arasindaki fark (clock drift) yuzunden zamanlayici yanlis bitiyordu.
-   - Cozum:
-     * `timerRef` ve `clearTimer()` ile temiz dongu kuruldu.
-     * `isAnswered` state kilidi ile ilk tiklamadan sonra butonlar kilitlendi.
-     * `questionEndsAt + drift` ile sunucu senkronlu kesin zamanlama hesaplandi.
-     * `joinedRoomRef` ile mükerrer `join_room` cagrilarinin onune gecildi.
+1.2. OYUN FORMATLARI VE MOD DİNAMİKLERİ
+FootQuiz oyunculara iki ana format sunar:
+a) 10 Kişilik Büyük Turnuva Modu (Classic Tournament):
+   - 10 soru, her soru 10 saniye.
+   - 10 gerçek oyuncu veya yetersiz oyuncu durumunda bot backfill.
+   - Rekabetçi moddur; RP (Rating Points) kazanımı/kaybı aktiftir.
+   - Kazanan tüm ödül potunu (%10 komisyon kesintisi sonrası) tek başına alır.
+b) 2 Kişilik Hızlı Düello Modu (Quick Duel):
+   - 3 soru, her soru 10 saniye.
+   - Anlık eşleşme; hızlı 1v1 rekabet.
+   - Çabuk nakit/coin kazanmak isteyen oyuncular için tasarlanmıştır.
 
-c) Backend GamesService Cokme (Crash) Sorunlari:
-   - Hata: Mac bittiginde `state.players` listesinde botlar da oldugu icin `walletService.getWallet(botId)` calistiriliyor, veritabaninda bot cuzdani olmadigindan sunucu 500 firlatiyor ve insan oyuncuya `game_finished` event'i hic ulasmiyordu.
-   - Cozum: `if (p.isBot) continue;` eklenerek botlar cuzdan guncellemesinden muaf tutuldu.
-   - Hata: Sorular cekilirken versiyonsuz soru geldiginde `q.versions[0]` satiri sunucuyu cokertiyordu.
-   - Cozum: Versiyonu olan sorular filtrelendi ve soru bulunamazsa odaya guvenli hata firlatildi.
-   - Hata: `finishGame` fonksiyonu ayni mac icin art arda tetiklenebiliyordu.
-   - Cozum: `if (state.status === 'GAME_FINISHED') return;` idempotency kontrolu konuldu.
+1.3. MONETİZASYON VE EKONOMİ FELSEFESİ
+FootQuiz ekonomisi kapalı devre sanal para (Coin) üzerine kuruludur.
+- Giriş Ücreti & Pot: Rekabetçi maçlarda her oyuncu eşit giriş ücreti (100, 250, 500 veya 1000 Coin) öder.
+  Toplanan toplam potun %90'ı birinciye aktarılır, %10'u sistem komisyonu (House Fee) olarak yakılır.
+- In-App Purchase (IAP): Google Play Billing ve Apple StoreKit 2 standartlarına uyumlu paketler.
+- VIP Pass Aboneliği: Aylık abonelikle reklamsız oyun, günlük +100 bonus coin ve 2x RP çarpanı.
+- Ödüllü Reklam (Rewarded Ad): Bakiyesi biten oyuncular için 15 saniye cooldown ile ücretsiz +50 Coin.
 
-d) Backend Matchmaking Yaris Durumu (Race Condition):
-   - Hata: 5 saniyelik bot bekleme suresi bittiginde ayni anda birden fazla kontrol calisiyor ve cift bot eklenip 2 ayri oda baslatiliyordu.
-   - Cozum: Redis `setNX(backfill_lock:{gameModeId}, 'locked', 5)` ile dagitik kilit kuruldu.
-
-2. YEREL ORTAM CALISTIRMA (LOCAL RUN & SERVICES)
-------------------------------------------------
-- Docker Desktop:
-  * Windows uzerinde Explorer oturumu (`explorer.exe "Docker Desktop.exe"`) ile baslatildi ve WSL2 baglantisi kuruldu.
-- Veritabani & Onbellek:
-  * PostgreSQL (Port 5433): `footquiz-postgres` calistirildi, `npx prisma db push` ile tablolar senkronize edildi.
-  * Redis (Port 6379): Calisan Redis teyit edildi, PING-PONG yaniti alindi.
-  * Veritabani Tohumlama: `npx tsx prisma/seed.ts` calistirilarak 10 bot hesabi, `quick_2` modu ve futbol sorulari eklendi.
-- Backend Servisi:
-  * `c:\Users\Alperen\Desktop\Footquiz\backend` dizininde `npm run start:dev` baslatildi.
-  * Port: http://localhost:4000 (CORS aktif, Socket Gateway hazir).
-- Frontend Servisi:
-  * `c:\Users\Alperen\Desktop\Footquiz\frontend` icine `.env.local` yazildi (`NEXT_PUBLIC_API_URL=http://localhost:4000`).
-  * `npm run dev` baslatildi. Port: http://localhost:4001 (Next.js Turbopack).
-
-3. TARAYICI TESTI VE DOM IYILESTIRMELERI (DOM POLISH)
------------------------------------------------------
-Browser subagent ile http://localhost:4001 uzerinde tam bir tur mac oynandi ve DOM eksikleri tespit edilip duzeltildi:
-- Baslik & Meta: Varsayilan "Create Next App", "FootQuiz | Canli Futbol Bilgi Yarismasi" olarak guncellendi.
-- Para Ikonu: Tarayicilarda kare kutu cikaran `🪙` emojileri yerine Lucide `Coins` vektorel altin ikonu yerlestirildi.
-- Soru Ekrani: Soru numarasi rozeti (`SORU 1`), nabiz atan sure hapi ve yumusak CSS animasyonlu canlı zaman cubugu (Progress Bar) eklendi.
-- Canli Skor Alani: "Sen vs Rakip" anlik puan kartlari yerlestirildi.
-- Mac Sonu (GameOver):
-  * Kazanilan Altin (`+180 Coin`) ve RP degisimi (`+20 RP` / `-10 RP`) gostergeleri eklendi.
-  * Detayli mac sonucu tablosunda oyuncu adi ve bot rakip adi, kazanan taci (`👑`) gosterildi.
-  * "Tekrar Oyna" ve "Lobiye Don" butonlari eklendi.
-
-4. GITHUB VE VERCEL DAGITIMI (DEPLOYMENT)
------------------------------------------
-- `next build` yerelde calistirildi, tip hatasi veya derleme uyarisi olmadigi dogrulandi.
-- `.gitignore` dosyasina test scriptleri ve tsbuildinfo eklendi.
-- Tum degisiklikler `main` dalina commitlendi:
-  Commit: `e8c5060 - fix: Game flow stability, socket re-render reactivity, timer leaks and DOM polish`
-- `git push origin main` ile `https://github.com/alperenkaban/footrace` reposuna gonderildi.
-- Vercel otomatik deploy tetiklendi.
+1.4. SÜRÜM GELİŞİM KRONOLOJİSİ
+- v1.0.0 (Temel MVP): Socket.io WebSocket altyapısı, misafir girişi, tek tip 2 kişilik maç, basit sorular.
+- v1.1.0 (Stabilite & DOM Polish): Reaktif SocketProvider, timer bellek sızıntılarının önlenmesi, Lucide vektörel ikonlar.
+- v1.2.0 (P0 Ekonomi & MatchHold Mimarisi): 2 fazlı MatchHold modeli, composite unique ledger, SELECT FOR UPDATE satır kilidi.
+- v1.3.0 (PvE Antrenman & Botlu Maç Güvenliği): Bot içeren maçlarda 0 coin girişi, 0 ödül, botların liderlikten tecrit edilmesi.
+- v1.4.1 (10 Kişilik Eşleştirme & Self-Healing): 15s bot timeout, DbBootstrapService kendini onarma, WebSocket polling fallback.
+- v1.5.0 (IAP Mağazası & Kademeli Bütçe Lobileri): Bronz/Gümüş/Altın/Elmas lobileri, StoreKit & Google Play makbuz doğrulaması,
+  çift sekmeli liderlik tablosu, Vercel & Render prod senkronizasyonu.
 
 
 ================================================================================
-BOLUM 3: GELECEK OTURUMLARDA PROJEYI YERELDE BASLATMA REHBERI
+BOLUM 2: UC-UCA SISTEM VE TEKNOLOJI MIMARISI (TECH STACK & TOPOLOGY)
 ================================================================================
 
-Sonraki oturumlarda projeyi yerelde calistirmak icin asagidaki adimlar izlenir:
+2.1. GENEL SİSTEM TOPOLOJİSİ
 
-1. DOCKER SERVISLERI KONTROLU:
-   cmd / powershell:
-   > docker ps
-   Eger calismiyorsa:
-   > docker compose up -d
+      [ Kullanıcı Tarayıcısı (Web / PWA / Mobil) ]
+                          │
+         ┌────────────────┴────────────────┐
+         │ HTTP / HTTPS                    │ WSS (WebSockets)
+         ▼                                 ▼
+   [ Vercel Edge / App Router ]      [ Render / Web Service ]
+   Next.js 16.3.8 (Frontend)         NestJS 12 (Backend Gateway & API)
+   Port: 4001 (Dev)                  Port: 4000 (Dev)
+         │                                 │
+         │ REST API (Auth, Shop, Leaderboard)
+         └─────────────────────────────────┤
+                                           ▼
+                    ┌─────────────────────────────────────────┐
+                    │               VERİ VE ÖNBELLEK          │
+                    ├────────────────────┬────────────────────┤
+                    │ PostgreSQL 15      │ Redis 7            │
+                    │ (Port: 5433:5432)  │ (Port: 6379)       │
+                    │ Prisma ORM v5.22   │ ioredis v6         │
+                    │ Kalıcı Veri &      │ Kuyruklar, Odalar, │
+                    │ Ledger Bütünlüğü   │ Dağıtık Kilitler   │
+                    └────────────────────┴────────────────────┘
 
-2. BACKEND DEV SUNUCUSU:
-   > cd c:\Users\Alperen\Desktop\Footquiz\backend
-   > npm run start:dev
-   (Sunucu http://localhost:4000 uzerinde calisir)
+2.2. TEKNOLOJİ YIĞINI BİLEŞENLERİ
+A) Backend Katmanı:
+   * Çatı: NestJS v12.0.1 (Node.js ESM Modülleri, TypeScript v5)
+   * WebSocket Ağ Geçidi: @nestjs/websockets, @nestjs/platform-socket.io, Socket.io v4.8.4
+   * ORM & Veri Erişimi: Prisma ORM v5.22.0
+   * Önbellek & Kuyruk: Redis 7-alpine, ioredis v6.0.0
+   * Kimlik Doğrulama: Passport.js, passport-jwt v4.0.1, passport-google-oauth20, passport-facebook
+   * UUID & Yardımcılar: uuid v14.0.2, RxJS v7.8.1
 
-3. FRONTEND DEV SUNUCUSU:
-   > cd c:\Users\Alperen\Desktop\Footquiz\frontend
-   > npm run dev
-   (Uygulama http://localhost:4001 uzerinde calisir)
+B) Frontend Katmanı:
+   * Çatı: Next.js v16.3.8 (App Router, Turbopack motoru)
+   * Kütüphane: React v19.2.8 & React-DOM v19.2.8
+   * Stil & Tasarım: TailwindCSS v4, özel Cam-Morfizm (Glassmorphism) CSS sınıfları
+   * İkon Seti: Lucide React v1.52.0
+   * Global Durum Yönetimi: Zustand v5.0.15 (LocalStorage persist destekli useAuthStore)
+   * WebSocket İstemcisi: Socket.io-client v4.8.4 (Özel SocketProvider React Context)
 
-4. VERITABANI SIFIRLAMA / YENIDEN TOHUMLAMA GEREKIRSE:
-   > cd c:\Users\Alperen\Desktop\Footquiz\backend
-   > npx prisma db push
-   > npx tsx prisma/seed.ts
+C) Altyapı ve Konteynerizasyon:
+   * Yerel Dev Altyapısı: Docker Compose (Docker Desktop WSL2)
+     - `footquiz-postgres`: postgres:15-alpine (Port 5433 -> 5432)
+     - `footquiz-redis`: redis:7-alpine (Port 6379, AOF açık)
+   * Canlı Dağıtım (Production):
+     - Frontend: Vercel (Root Directory: `frontend`, Turbopack Production Build)
+     - Backend: Render Web Service (Docker container veya Node env)
+     - Veritabanı: Managed PostgreSQL (Supabase / Aiven / Render Postgres)
+     - Önbellek: Managed Redis (Upstash / Redis Cloud / Aiven)
 
-================================================================================
-BOLUM 4: EKONOMI GUVENLIGI, BOTLU MACLAR (PvE MODU) VE SETTLEMENT REVIZYONU
-================================================================================
-
-1. EKONOMI GUVENLIGI VE ACIK ANALIZI (SECURITY AUDIT)
-----------------------------------------------------
-- Problem (Karsiliksiz Coin Uretimi & Enflasyon):
-  Eski sistemde 1 gercek oyuncu + 9 bot eslesmesinde oyuncudan 100 coin aliniyor, botlar para odemese
-  dahi pot 10 * 100 = 1000 coin hesaplaniyor ve kazanana 900 coin odeniyordu.
-  Bu durum sistemin her botlu macta havadan +800 coin basmasina ve haksiz bakiye farm'ina yol aciyordu.
-- Ayrica botlar liderlik tablosunda yer aliyor, mac kazandikca gercek oyuncularin rating siralamasini isgal ediyordu.
-
-2. UYGULANAN COZUM: SECENEK C (UCRETSIZ PvE / ANTRENMAN MODU)
--------------------------------------------------------------
-- Kesin Ekonomi Kurallari:
-  1) Yalnizca 10 gercek oyuncunun yer aldigi ve tum oyuncularin giris ucretini odedigi maclar rekabetcidir (Competitive).
-  2) Bir macta tek bir bot bile varsa (`isBot: true`), mac otomatik olarak PvE Antrenman Modu kabul edilir.
-  3) Botlu maclarda gercek oyunculardan ASLA giris ucreti alinmaz (`effectiveEntryFee = 0`).
-  4) Eger gercek oyuncu kuyruktayken ucreti bloke edilmis (`heldBalance`) ve ardindan bot backfill ile botlu maca
-     gecilmis ise, oyuncunun giris ucreti derhal ve eksiksiz iade edilir.
-  5) Botlu maclarda karsiliksiz coin basimi (MATCH_REWARD) yapilmaz; komisyon kesilmez; kazanan odulu 0 coindir.
-  6) Botlu maclar gercek oyuncularin veya botlarin rekabetci rating (RP), galibiyet (wins) veya liderlik siralamasini degistirmez.
-  7) Botlar gercek oyuncu cuzdanlarindan asla coin transferi alamaz.
-
-3. KOD DUZEYINDEKI REVIZYONLAR
-------------------------------
-a) WalletService (`backend/src/wallet/wallet.service.ts`):
-   - `refundEntryFee(userId, amount)`: Idempotent bloke iadesi eklendi. Oyuncunun `heldBalance` degeri yeterli ise
-     guvenle iade eder; daha once iade edilmisse (cift tetikleme durumunda) cift odeme yapmaz ve `false` doner.
-   - `settleMatch(matchId, winnerId, entryFee, allPlayerIds, isPvE)`:
-     Veritabani duzeyinde oyuncu listesinde bot olup olmadigi (`tx.user.findMany({ where: { isBot: true } })`) dogrulanir.
-     Eger bot varsa veya `isPvE: true` ise:
-     * 0 coin odul verilir.
-     * Rating ve galibiyet artisi yapilmaz.
-     * CoinTransaction (Ledger) olusturulmaz.
-     * Mac PostgreSQL'de `SETTLED` olarak isaretlenir (Idempotency korunur).
-
-b) MatchmakingService (`backend/src/matchmaking/matchmaking.service.ts`):
-   - `backfillWithBots`: Botlar icin ucret bloke etme kodu kaldirildi. Kuyruktaki gercek oyuncularin rezerve edilen ucretleri
-     `refundEntryFee` ile aninda iade edilerek mac baslatildi.
-   - `initializeRoom`: Odaya bot dahil edildigi anda `roomState.isPvE = true`, `roomState.entryFee = 0` set edildi.
-     Ekstra guvenlik onlemi olarak odadaki insan oyuncularin ucretleri cift kontrolden gecirilerek iade teyit edildi.
-
-c) GamesService (`backend/src/games/games.service.ts`):
-   - `finishGame`: Oda state'i ve oyuncu listesi taranarak `isPvE` tespiti yapildi.
-   - `settleMatch` fonksiyonuna `isPvE` bayragi aktarildi.
-   - Odaya yayinlanan `game_finished` soket olayinda `rewards: { coins: 0, ratingChange: 0 }` ve `isPvE: true` gonderildi.
-
-d) LeaderboardService (`backend/src/leaderboard/leaderboard.service.ts`):
-   - `getGlobalLeaderboard` sorgusuna `where: { user: { isBot: false } }` filtresi eklendi.
-   - Botlar rekabetci global liderlik tablosundan tamamen izole edildi.
-
-e) Frontend Game Ekrani (`frontend/src/app/game/[roomId]/page.tsx`):
-   - JavaScript `0 || 180` ve `0 || 20` falsy bug'i duzeltilerek nullish coalescing (`?? 0`) uygulandi.
-   - PvE antrenman maclari tamamlandiginda oyuncuya ozel "🎮 PvE Antrenman Modu (Giris Ucreti Alinmadi, Odul & Rating Etkisiz)"
-     bilgilendirme rozeti gosterildi.
-
-4. DOGRULAMA VE TEST SONUCLARI
-------------------------------
-- Vitest Test Paketi: 7 test dosyasi, 33 birim/entegrasyon testi %100 basariyla gecti (`npm test`: 1.21s).
-- Bot Becerisi Simülasyonu: 12.000 turda Acemi %60.7, Normal %75.3, Usta %90.4 ile agirlikli %75.45 bot dogrulugu olculdu.
-- Frontend Derlemesi: `next build` hatasiz ve 0 TypeScript uyarisiz tamamlandi.
-
-================================================================================
-BOLUM 4: P0 EKONOMI GUVENLIGI, MATCHHOLD YASAM DONGUSU, CANLILIK VE BASELINE
-================================================================================
-Tarih: 12 Ekim 2026
-Sürüm: 1.2.0 (Canliya Gecis Kapisi / Pre-Production Certified)
-
-1. MATCHHOLD MODELI VE ACIK ILISKILENDIRME (EXPLICIT BINDING)
---------------------------------------------------------------
-- Eski Acik: Kuyruktaki bloke bakiyeler `matchId: null` uzerinden baglandiginda ayni kullanicinin
-  farkli sekmelerdeki hold kayitlari birbirine karisabiliyordu.
-- Cozum:
-  * `MatchmakingService.joinQueue`: Bloke olusturuldugunda olusan spesifik `holdId`, Redis'te
-    `player_hold:${userId}` anahtarina kaydedildi.
-  * `MatchmakingService.leaveQueue`: Kuyruktan cikista `player_hold:${userId}` okunarak
-    `walletService.refundHoldRecord(holdId)` cagrildi.
-  * `MatchmakingService.initializeRoom`: Eslestirilen tum oyuncularin `holdId` degerleri toplanip
-    `walletService.bindHoldsToMatch([{ userId, holdId }])` seklinde acik parametrelerle iletildi.
-  * `WalletService.bindHoldsToMatch`: `where: { id: targetHoldId, userId, status: 'HELD', matchId: null }`
-    filtresi ve PostgreSQL `SELECT ... FOR UPDATE` satir kilidi ile izole edildi.
-  * Bir hold yalnizca tek bir maca baglanabilir; ayni hold ikinci bir maca baglanamaz.
-
-2. CIFT KATMANLI CANLILIK (LIVENESS) VE GUVELI RECONCILIATION
---------------------------------------------------------------
-- Eski Acik: `createdAt < 15dk` olan her aktif mac sunucu tarafindan terk edilmis sanilip iptal ediliyordu.
-- Cozum:
-  * `GamesService.updateMatchActivity(roomId)`:
-    - Redis'e `match_activity:${roomId}` timestamp'i yazar.
-    - `room:${roomId}` icindeki `lastActivityAt` degerini gunceller.
-    - PostgreSQL'de `MatchHold.updatedAt` kolonunu anlik zamana ceker.
-  * Tetiklenme Noktalari: Geri sayim baslangici, soru baslangici, cevap gonderimi, soru bitisi
-    ve oyuncu yeniden baglanma (`handleJoinRoom`).
-  * `WalletService.reconcileStaleMatches(15)`:
-    - `MatchHold.updatedAt` 15 dakika icindeyse iptal ATLANIR (PostgreSQL kalici sigortasi).
-    - Redis `match_activity` veya `room.lastActivityAt` 15 dakika icindeyse iptal ATLANIR.
-    - Redis restart edilse veya oda anahtari silinse dahi aktif mac iptal EDILMEZ.
-    - Yalnizca hem Redis'te hem PostgreSQL'de 15 dakikadir hic aktivite gostermemis gercek terk edilmis
-      maclar atomik olarak `ABORTED` yapilir ve bakiye eksiksiz iade edilir.
-
-3. BASELINE MIGRATION ZINCIRI DENETIMI
----------------------------------------
-- Mevcut Durum: Geliştirme veritabanı tabloları başlangıçta `prisma db push` ile açıldığından
-  `prisma/migrations` dizininde sadece `20261012_p0_match_hold_and_ledger` mevcuttu.
-- Dogrulama:
-  * Scratch alanında `0_init.sql` oluşturuldu (başlangıç tabloları ve enum'lar).
-  * Boş test veritabanında (`footquiz_migrate_verify`) sıralı olarak `20261011000000_init` ve
-    `20261012_p0_match_hold_and_ledger` deploy edildi.
-  * `prisma migrate diff` ile canlı DB ve `schema.prisma` karşılaştırıldı: "No difference detected."
-  * Canlı geliştirme DB'sinde hiçbir tabloya DROP/TRUNCATE veya reset uygulanmadı;
-    kullanıcı onayı sonrası `prisma migrate resolve --applied 20261011000000_init` uygulanmak üzere hazırlandı.
-
-4. DOGRULANMIS TEST METRIKLERI
-------------------------------
-- Gerçek Altyapı Testi (`backend/test-real-infra.ts`):
-  * Docker PostgreSQL (5433) ve Redis (6379) üzerinde 20/20 senaryo GEÇTİ (%100).
-  * Kapsanan Gerçek Altyapı Alanları:
-    - 5 eşzamanlı çift iade yarışı (Single refund, zero duplicate).
-    - İki eşzamanlı settleMatch yarışı (Single prize, zero duplicate minting).
-    - Aynı kullanıcının farklı maçlardaki bağımsız hold izolasyonu.
-    - Settle + Refund + Reconcile üçlü çakışma yarışı (Tek yönlü durum geçişi).
-    - İki bağımsız backend process/instance simülasyonu (Cross-process `SELECT ... FOR UPDATE` row lock).
-    - Transaction ortasında DB kesintisi ve crash recovery (Atomik rollback, veri kaybı 0).
-    - Ağ kesintisi sonrası idempotent retry doğrulaması.
-    - Soru döngüsü, cevap ve sayaç liveness güncellemeleri (15 dk koruması).
-    - Redis anahtarı kaybolsa dahi PostgreSQL kalıcı liveness ile maçın korunması.
-    - Eşzamanlı çalışan iki reconciliation worker yarışı.
-    - Hold durumunun (REFUNDED vs SETTLED) karşılıklı dışlayıcılığı.
-    - PvE bot maçında insan oyuncunun bakiyesi, komisyonu, galibiyet ve rating koruması (0 inflation).
-- Vitest Birim ve Eşzamanlılık Testleri (`npm test`):
-  * 8 test dosyası, 61/61 test GEÇTİ (%100).
-- Derleme: `npm run build` (Prisma generate + Nest build) 0 hata ile tamamlandı.
-- Uçtan Uca MVP Kabul Testi (`backend/test-e2e-mvp-audit.ts`):
-  * Docker PostgreSQL (5433) ve Redis (6379) üzerinde 10/10 senaryo GEÇTİ (%100).
-  * Kapsanan Alanlar: Misafir JWT auth, bakiye bloke doğruluğu, quick_2 ve classic_10 bot backfill,
-    soru seçimi ve doğru cevap gizliliği, sunucu zaman otoritesi, grace period, mükerrer cevap engeli,
-    impersonation engeli, yeniden bağlanma (reconnect) oturum tespiti, tek seferlik settlement ve PvE kuralları.
-
-5. URETİM ONCESİ MVP KABUL DENETIMI VE GUVENLIK BULGULARI
----------------------------------------------------------
-- Gerçek Maç Akışı:
-  * Misafir girişi, cüzdan bakiyesi, bot backfill, soru döngüsü ve tek seferlik settlement
-    gerçek PostgreSQL ve Redis altyapısında uçtan uca test edildi ve %100 doğrulandı.
-  * PvE bot maçlarında pot kesintisi, sahte coin basımı veya haksız rating artışı oluşmadığı kanıtlandı.
-- WebSocket ve Oyun Bütünlüğü:
-  * Cevap göndermede (`submitAnswer`) oyuncu kimliği ve oda kimliği kesin olarak sunucu tarafında
-    çözülmektedir; oyuncunun başkasının adına cevap göndermesi teknik olarak engellenmiştir.
-  * Süresi geçmiş cevaplar ve mükerrer cevaplar reddedilmektedir.
-  * [P1 BULGU]: `GameGateway.handleJoinRoom` fonksiyonunda odaya socket bazında katılım sağlanırken
-    oyuncunun o odanın resmi katılımcısı olup olmadığı doğrulanmamaktadır.
-- Üretim Operasyonları ve Açık Riskler:
-  * [P1 BULGU]: HTTP katmanında Rate Limiting (`@nestjs/throttler`) henüz etkin değildir.
-  * [P1 BULGU]: DTO seviyesinde genel `ValidationPipe` aktifleştirilmemiştir.
-  * [P1 BULGU]: CORS (`origin: '*'`) canlı alan adına kısıtlanmamıştır.
-  * [P2 BULGU]: `JWT_SECRET` için kod içi yedek fallback metni mevcuttur.
-  * [P2 BULGU]: Sistem sağlığı için `/health` endpoint'i ve otomatik `pg_dump` backup prosedürü eklenmelidir.
-- Genel Kabul Kararı:
-  * "SINIRLI BETA ICIN HAZIR (LIMITED BETA READY - Risklerle)"
-  * Kapalı kullanıcı testleri için oynanabilir, güvenli ve tutarlıdır; genel kamuya açık canlı lansmandan
-    önce listelenen P1 iyileştirmelerinin tamamlanması önerilir.
+2.3. MODÜLER BACKEND YAPISI VE GÖREV DAĞILIMI
+- GatewayModule (`GameGateway`):
+  * WebSocket el sıkışması (handshake), JWT kimlik doğrulaması (`client.handshake.auth.token`).
+  * Dinlenen Soket Olayları: `join_matchmaking`, `leave_matchmaking`, `join_room`, `submit_answer`, `request_bot_match`.
+  * Odaya Yayınlanan Olaylar: `match_found`, `game_countdown`, `question_started`, `score_updated`, `question_ended`, `game_finished`, `wallet_updated`.
+- MatchmakingModule (`MatchmakingService`):
+  * Eşleştirme kuyruklarını (Redis List / ZSET) yönetir.
+  * 12 saniye eşleşme arama zaman aşımı ve otomatik bot tamamlama (backfill).
+  * Çoklu kuyruk çakışmalarını engelleyen atomik dağıtık kilitler (`player_queue_lock:${userId}`).
+  * Giriş ücreti bloke işlemlerini `WalletService` ile koordine eder.
+- GamesModule (`GamesService`):
+  * Odaların bellek/Redis durumunu (`room:${roomId}`) yönetir.
+  * Sunucu zaman otoritesi (Server-Authoritative Timing) ve 1000ms grace period.
+  * Tekrarsız soru seçimi (`QuestionSelector`) ve skor hesaplama motoru (`ScoringEngine`).
+  * Maç bitimi, kazanan tespiti, pot settlement ve cüzdan güncelleme yayını.
+- WalletModule (`WalletService`):
+  * Cüzdan bakiyesi, bloke bakiye (`heldBalance`), iade (`refundEntryFee`, `refundMatchHolds`).
+  * Finansal ledger defteri (`CoinTransaction`) ve tekil ödül dağıtımı (`settleMatch`).
+  * Asılı maçları kurtaran otomatik reconciliation döngüsü (`reconcileStaleMatches`).
+- BotModule (`BotService`):
+  * 20 hazır bot hesabı ve yetersizlik durumunda dinamik bot profilleri (`bot_dyn_*`).
+  * 3 seviyeli bot zekâsı: Acemi (%60 doğruluk), Normal (%75 doğruluk), Usta (%90 doğruluk).
+  * 2-6 saniye arası insan benzeri gecikme simülasyonu (`simulateAnswer`).
+- ShopModule (`ShopService` & `ShopController`):
+  * Google Play Billing ve Apple StoreKit 2 makbuz doğrulama.
+  * Satın alımları geri yükleme (`restorePurchases`), VIP Pass abonelik takibi (`user_vip:${userId}`).
+  * Ödüllü reklam tamamlama ve 15 saniye cooldown takibi.
+- LeaderboardModule (`LeaderboardService`):
+  * "Genel Derece (RP)" ve "Haftalık Kazananlar (Galibiyet)" sıralaması.
+  * Botların rekabetçi liderlikten tamamen filtrelenmesi (`isBot: false`).
+  * 30 saniyelik Redis önbellek katmanı.
+- PrismaModule & RedisModule:
+  * `PrismaService`: PostgreSQL bağlantı ve sorgu yürütücüsü.
+  * `DbBootstrapService`: NestJS bootstrap kancasında şema, oyun modları ve botları onaran self-healing servisi.
+  * `RedisService`: ioredis sarmalayıcısı (set, get, del, setNX, enqueue, dequeue).
 
 
 ================================================================================
-BOLUM 5: SURUM 1.4.1 - 10 KISILIK ESLESTIRME VE CANLI SISTEM IYILESTIRMELERI
+BOLUM 3: VERITABANI VE REDIS SEMASI (DATA MODEL & STATE MACHINES)
 ================================================================================
-Tarih: 15 Ekim 2026
-Surum: 1.4.1 (Matchmaking Hotfix & Self-Healing Resilience)
 
-1. ISTEMCI TEPKISIZLIGI VE WEBSOCKET COZUMU
---------------------------------------------
-- Sorun: Frontend'de `transports: ['websocket']` direkt zorlandiginda, tarayici ile Render backend
-  arasindaki ilk el sikisma 3-5 saniye gecikiyor veya bazi aglarda bloklaniyordu.
-  Kullanici lobi butonuna tikladiginda socket henuz bagli olmadigi icin tiklama bosa dusuyor,
-  hicbir hata mesaji veya geri bildirim gorunmuyordu.
-- Cozum:
-  * `SocketProvider`: `transports: ['polling', 'websocket']` seklinde guncellendi. Aninda HTTP uzerinden
-    baglanip ardindan sorunsuz WebSocket yukseltmesi saglandi.
-  * `LobbyPage`: Butona `SUNUCUYA BAGLANILIYOR...` spinner animasyonu, tıklandığında anlık iyimser
-    (optimistic) `Odaya baglaniliyor...` durumu ve anlık geri bildirim eklendi.
+3.1. POSTGRESQL PRISMA VERİTABANI ŞEMASI
 
-2. RENDER / CANLI DATABASE ICIN KENDINI IYILESTIRME (SELF-HEALING BOOTSTRAP)
------------------------------------------------------------------------------
-- Sorun: Canli Render sunucusunda calisan PostgreSQL veritabaninda bazi migration'lar
-  veya seed verileri (ozellikle `classic_10` modu, botlar veya sorular) eksik kaldiginda,
-  oyuncu kuyrukta kaliyor ve bot backfill sessizce cokuyordu.
-- Cozum:
-  * `DbBootstrapService`: NestJS `OnApplicationBootstrap` kancasinda otomatik devreye giren
-    dayanikli bir servis yazildi.
-  * Kontroller:
-    1) `GameMode` tablosunda `quick_2` ve `classic_10` varligini kontrol eder, yoksa aninda olusturur.
-    2) En az 20 bot hesabini ve cuzdanlarini dogrular, eksikse uretir.
-    3) Futbol sorulari ve versiyonlarini dogrular.
-    4) `MatchHold` tablosunu ve `CoinTransaction` unique indeksini calisma aninda garanti eder.
-  * `package.json` (`start:prod`): `prisma migrate deploy && node dist/main` zinciri ile otomatiklestirildi.
+1) User (Kullanıcı Tablosu):
+   - id: String (UUID, PK)
+   - email: String? (Unique)
+   - passwordHash: String?
+   - googleId: String? (Unique)
+   - facebookId: String? (Unique)
+   - isGuest: Boolean (Default: true)
+   - isBot: Boolean (Default: false)
+   - createdAt, updatedAt: DateTime
+   - İlişkiler: profile, coinTransactions, matchPlayers, matchHolds
 
-3. BOT SERVICE DINAMIK YEDEKLEME (DYNAMIC FALLBACK)
----------------------------------------------------
-- `BotService.getAvailableBots`: Veritabaninda tanimli bot sayisi 10 kisi icin yetersiz kalsa dahi,
-  sistem bellekte dinamik bot profilleri (`bot_fallback_*`) uretip maçı eksiksiz 10 kisiye tamamlar.
+2) PlayerProfile (Oyuncu Cüzdan ve İstatistik Tablosu):
+   - id: String (UUID, PK)
+   - userId: String (Unique, FK -> User.id)
+   - rating: Int (Default: 1000, Elo puanı)
+   - balance: Int (Default: 0, Kullanılabilir Coin bakiyesi)
+   - heldBalance: Int (Default: 0, Maç girişi için bloke tutar)
+   - totalGames: Int (Default: 0)
+   - wins: Int (Default: 0)
+   - losses: Int (Default: 0)
+   - updatedAt: DateTime
+
+3) MatchHold (Kritik Bloke Yaşam Döngüsü Tablosu):
+   - id: String (UUID, PK)
+   - userId: String (FK -> User.id)
+   - matchId: String? (FK -> Match.id, maç oluştuktan sonra bağlanır)
+   - gameModeId: String?
+   - amount: Int (Bloke edilen Coin tutarı)
+   - status: String (Default: "HELD" | "REFUNDED" | "SETTLED")
+   - createdAt, updatedAt: DateTime (Canlılık nabzı buraya yazılır!)
+   - refundedAt: DateTime?
+   - settledAt: DateTime?
+   - İndeksler: `[userId, status]`, `[matchId, status]`
+
+4) CoinTransaction (Finansal Denetim ve Ledger Tablosu):
+   - id: String (UUID, PK)
+   - userId: String (FK -> User.id)
+   - amount: Int (Pozitif veya negatif tutar)
+   - type: String (GAME_REWARD, MATCH_REFUND, SHOP_PURCHASE, DAILY_REWARD, IAP_GOOGLE_PURCHASE, IAP_APPLE_PURCHASE)
+   - referenceId: String (Idempotency anahtarı: matchId, holdId veya sipariş numarası)
+   - balanceBefore: Int
+   - balanceAfter: Int
+   - createdAt: DateTime
+   - Bileşik Unique İndeks: `@@unique([userId, type, referenceId])` (Mükerrer işlemi DB seviyesinde imkansız kılar)
+
+5) GameMode (Oyun Modu Tanımları):
+   - id: String (UUID, PK)
+   - name: String (Unique, örn: `classic_10`, `classic_10_gold`, `quick_2`)
+   - maxPlayers: Int (2 veya 10)
+   - questionCount: Int (3 veya 10)
+   - questionDuration: Int (Standart 10 saniye)
+   - entryFee: Int (100, 250, 500, 1000)
+   - rewardMultiplier: Float (Default: 1.0)
+   - ratingEnabled: Boolean (Turnuvalarda true, hızlı düellolarda false)
+   - isActive: Boolean (Default: true)
+
+6) Question & QuestionVersion (Soru Kataloğu):
+   - Question: id (UUID), code (Unique, örn: `q_messi_ballondor_count`), type (QuestionType Enum), createdAt
+   - QuestionVersion: id (UUID), questionId (FK), versionNumber (Int), text (String), metadata (Json),
+     correctAnswer (Json), isActive (Boolean), createdAt. `@@unique([questionId, versionNumber])`
+   - QuestionType Enum: `MULTIPLE_CHOICE`, `ESTIMATION`, `RANKING`, `PLAYER_GUESS`, `HARD_QUESTION`, `FINAL`
+
+7) Match, MatchPlayer, MatchQuestion, Answer:
+   - Match: id (UUID, PK - roomId ile aynıdır), gameModeId (FK), status (`ACTIVE`, `SETTLED`, `ABORTED`),
+     createdAt, endedAt, settledAt (Idempotency kalkanı).
+   - MatchPlayer: id, matchId (FK), userId (FK), finalScore (Int), isWinner (Boolean). `@@unique([matchId, userId])`
+   - MatchQuestion: id, matchId (FK), questionVersionId (FK), orderIndex (Int), startedAt, endedAt. `@@unique([matchId, orderIndex])`
+   - Answer: id, matchQuestionId (FK), matchPlayerId (FK), givenAnswer (Json), scoreAwarded (Int),
+     responseTimeMs (Int), submittedAt. `@@unique([matchQuestionId, matchPlayerId])`
+
+3.2. REDIS ANAHTAR UZAYI (KEY SPACE) VE VERİ YAPILARI
+- `matchmaking_queue:{gameModeId}`: (List) Kuyrukta bekleyen kullanıcı ID'leri.
+- `player_queue:{userId}`: (String) Kullanıcının kayıtlı olduğu oyun modu (TTL: 3600s).
+- `player_queue_time:{userId}`: (String) Kullanıcının kuyruğa giriş timestamp'i (TTL: 3600s).
+- `player_hold:{userId}`: (String) Kullanıcının bekleyen aktif MatchHold ID'si (TTL: 3600s).
+- `player_queue_lock:{userId}`: (String) Eşzamanlı kuyruk katılma kilidi (TTL: 5s, SET NX).
+- `backfill_lock:{gameModeId}`: (String) Çift bot basımını engelleyen dağıtık kilit (TTL: 10s, SET NX).
+- `room:{roomId}`: (String/JSON) Oyun odası anlık durumu, soru indeksi, verilen cevaplar (TTL: 3600s).
+- `player_room:{userId}`: (String) Oyuncunun bulunduğu oda ID'si; reconnect için kullanılır (TTL: 3600s).
+- `match_activity:{roomId}`: (String) Maçın son aktivite zaman damgası (TTL: 3600s, liveness nabzı).
+- `finish_lock:{roomId}`: (String) Maç bitişinin çift tetiklenmesini önleyen kilit (TTL: 60s, SET NX).
+- `user_vip:{userId}`: (String/JSON) VIP Pass abonelik durumu ve geçerlilik tarihi (TTL: 35 gün).
+- `user_ad_cooldown:{userId}`: (String) Ödüllü reklam bekleme süresi (TTL: 15s).
+- `leaderboard:global:{sortType}:top_{limit}`: (String/JSON) Liderlik önbelleği (TTL: 30s).
+
+3.3. DURUM MAKİNELERİ (STATE MACHINES)
+A) MatchHold Durum Makinesi:
+   [ Başlangıç ] ──holdEntryFee──> [ HELD ]
+                                       │
+                ┌──────────────────────┴──────────────────────┐
+                │ refundHoldRecord / refundMatchHolds         │ settleMatch (Yalnızca rekabetçi galibiyet)
+                ▼                                             ▼
+          [ REFUNDED ]                                  [ SETTLED ]
+   * Kural: Geçiş tek yönlüdür. Bir hold asla hem REFUNDED hem SETTLED olamaz.
+
+B) Oyun Odası (GameState) Döngüsü:
+   [ PLAYER_READY ] ──3s Countdown──> [ COUNTDOWN ] ──Soru Başlangıcı──> [ QUESTION_ACTIVE ]
+                                                                               │ 10s Süre Sonu
+                                                                               ▼
+   [ GAME_FINISHED ] <──Son Soru Bitişi── [ QUESTION_ENDED ] <─────────────────┘
+           │
+           └──settleMatch & wallet_updated──> [ ODA TEMİZLİĞİ (Redis DEL) ]
 
 
 ================================================================================
-BOLUM 6: SURUM 1.5.0 - IAP MAGAZASI, KADEMELI BUTCE LOBILERI VE CANLI VERIFICATION
+BOLUM 4: P0 EKONOMI GUVENLIGI, MATCHHOLD YASAM DONGUSU VE LEDGER DEGISMEZLERI
 ================================================================================
-Tarih: 16 Ekim 2026
-Surum: 1.5.0 (In-App Purchases, Budget Tier Lobbies, StoreKit/Google Play, Vercel Production)
 
-1. UYGULAMA ICI SATIN ALIM (IN-APP PURCHASES - IAP) VE VIP PAS
---------------------------------------------------------------
-Mobil ve web platformlarina hazirlik kapsaminda Google Play ve Apple App Store standartlarina
-tam uyumlu magaza mimarisi kuruldu:
+4.1. MİKRO-BAHİS VE FİNANSAL GÜVENLİK FELSEFESİ
+FootQuiz gerçek para veya sanal bakiye transferi içerdiğinden sıfır toleranslı finansal güvenlik kuralları uygular:
+- "Hiçbir coin havadan üretilemez": Ödül potu sadece ve sadece oyuncuların kasaya koyduğu tutarlardan oluşur.
+- "Her hareket çift taraflı kayıt altına alınır": Tüm bakiye değişimleri `CoinTransaction` defterine işlenir.
+- "Idempotent İşlem İlkesi": Bir ağ hatası veya sunucu yeniden denemesi (retry) asla ikinci kez ödül veya iade veremez.
 
-- Urun Katalogu:
-  * `com.footquiz.coins.100` (100 Coin - 19.99 TL)
-  * `com.footquiz.coins.500` (550 Coin [%10 Bonus] - 89.99 TL)
-  * `com.footquiz.coins.1200` (1,400 Coin [%15 Bonus] - 199.99 TL)
-  * `com.footquiz.coins.3000` (3,800 Coin [%25 Bonus] - 449.99 TL)
-  * `com.footquiz.vip.monthly` (VIP Pass Aylik Abonelik - 149.99 TL)
+4.2. MATCHHOLD MODELİ VE AÇIK İLİŞKİLENDİRME (EXPLICIT BINDING)
+Eski sistemlerde yaşanan "kuyrukta bekleyen kullanıcının başka bir sekmedeki maçıyla bakiyesinin karışması" sorunu,
+açık ilişkilendirme mimarisiyle kökten çözülmüştür:
+1) `MatchmakingService.joinQueue`:
+   - `walletService.holdEntryFee(userId, entryFee)` çağrılır.
+   - Veritabanında `MatchHold` tablosuna `status: 'HELD'`, `matchId: null` kaydı atılır.
+   - Dönen `holdId`, Redis'te `player_hold:${userId}` anahtarına kaydedilir.
+2) `MatchmakingService.leaveQueue`:
+   - Redis'ten `player_hold:${userId}` okunur.
+   - `walletService.refundHoldRecord(holdId)` çağrılarak doğrudan o spesifik hold iade edilir.
+3) `MatchmakingService.initializeRoom`:
+   - Eşleşen tüm oyuncuların hold ID'leri toplanır (`[{ userId, holdId }]`).
+   - `walletService.bindHoldsToMatch` fonksiyonuna aktarılır.
+   - `SELECT ... FOR UPDATE` ile hold satırı kilitlenir ve `matchId` ilgili odaya bağlanır.
+   - Bir hold sadece bir maça bağlanabilir; açık parametre harici çapraz bağlanma teknik olarak imkânsızdır.
 
-- Backend Servisi (`backend/src/shop/shop.service.ts` & `shop.controller.ts`):
-  * `verifyGooglePlayPurchase`: Google Play Billing makbuzlarini cozer, orderId idempotency kontrolu yapar.
-  * `verifyAppleAppStorePurchase`: Apple StoreKit 2 JWS token dogrulama mantigini isletir.
-  * `restorePurchases`: Apple App Store Guideline 3.1.1 geregi zorunlu olan satin alimlari geri yukleme akisi.
-  * Anti-Replay Guvenligi: `CoinTransaction.referenceId` uzerinden cift harcama (double-spend) ve
-    ayni makbuzun tekrar tekrar gonderilmesi (replay attack) %100 engellendi.
-  * VIP Abonelik Yonetimi: Redis uzerinde TTL'li anahtar (`user_vip:${userId}`) ile VIP statu takibi,
-    2x XP/RP carpani, ozel altin tac rozeti ve gunluk ucretsiz +100 coin alma hakki eklendi.
+4.3. ÇİFT HARCAMA VE MÜKERRER ÖDÜL KORUMASI (LEDGER INVARIANTS)
+PostgreSQL seviyesinde tanımlanan bileşik unique indeks:
+`@@unique([userId, type, referenceId])`
 
-- Frontend Bilesenleri (`frontend/src/app/shop/page.tsx` & modals):
-  * `IapModal`: Apple StoreKit 2 (iOS Face ID, Apple ID sheet) ve Android Google Play Billing (GPay)
-    arayuz tasarimlari birebir canlandirildi. Magaza platform secicisi (Apple / Google) eklendi.
-  * `LegalTermsModal`: Apple ve Google magazaya kabul kriteri olan EULA (Kullanim Kosullari) ve
-    Gizlilik Politikasi modal penceresi hazirlandi.
-  * Odule Dayali Reklam (Rewarded Ad): 30 saniyelik reklam izleme simulasyonu ile +25 coin odul eklendi.
+Bu sayede:
+- Bir maç ID'si için aynı kullanıcıya birden fazla `MATCH_REWARD` yazılamaz.
+- Bir maç veya hold ID'si için aynı kullanıcıya birden fazla `MATCH_REFUND` yazılamaz.
+- PostgreSQL 25P02 transaction abort hatalarını önlemek adına, kod seviyesinde `create` öncesinde
+  `tx.coinTransaction.findUnique` kontrolü yapılarak işlem güvenliği iki katına çıkarılmıştır.
 
-2. KADEMELI BUTCE LOBILERI (TIERED BUDGET LOBBIES)
---------------------------------------------------
-Kullanicinin "farkli butceler icin farkli lobiler yapalim mesela giris 500 odul 4500" talebi
-dogrultusunda 4 farkli ekonomik kademe olusturuldu:
+4.4. ÇOKLU SÜREÇ (CROSS-PROCESS / MULTI-INSTANCE) SATIR KİLİDİ KORUMASI
+Yatayda birden fazla backend konteynerinin çalıştığı ortamlarda eşzamanlı settlement yarışlarını önlemek için:
+- `settleMatch` ve `reconcileStaleMatches` işlemlerinde ham SQL ile PostgreSQL satır kilidi uygulanır:
+  ```sql
+  SELECT status, "settledAt" FROM "Match" WHERE id = $1 FOR UPDATE
+  ```
+- İlk erişen işlem satırı kilitler, `settledAt` damgasını vurur.
+- İkinci işlem kilit açıldığında satırı okur; `settledAt` dolu olduğu için sessizce ve güvenle işlemi sonlandırır.
 
-- 10 Kisilik Klasik Maclar:
-  * 🥉 Bronz Lobi:  100 Coin Giris ->  900 Coin Odul (`classic_10`)
-  * 🥈 Gumus Lobi:  250 Coin Giris -> 2250 Coin Odul (`classic_10_silver`)
-  * 🥇 Altin Lobi:  500 Coin Giris -> 4500 Coin Odul (`classic_10_gold`)
-  * 💎 Elmas Lobi: 1000 Coin Giris -> 9000 Coin Odul (`classic_10_diamond`)
+4.5. PvE BOT MAÇLARI GÜVENLİK ANAYASASI (SEÇENEK C)
+Botların bulunduğu maçlarda ekonominin suistimal edilmesini engelleyen kesin kurallar:
+1) Rekabetçilik Şartı: Yalnızca tüm katılımcıların gerçek insan olduğu ve giriş ücreti ödediği maçlar rekabetçidir.
+2) Otomatik PvE Tespiti: Maçta tek bir bot dahi varsa (`isBot: true`), maç otomatik olarak PvE Antrenman Modu kabul edilir.
+3) Giriş Ücreti Muafiyeti: Botlu maçlarda gerçek oyuncuların giriş ücreti sıfırlanır (`effectiveEntryFee = 0`).
+   Kuyruktayken bloke edilmiş tutar, maç başladığı anda `refundMatchHolds(roomId)` ile eksiksiz iade edilir.
+4) Sıfır Enflasyon / Sıfır Ödül: Botlu maçlarda karşılıksız ödül (`MATCH_REWARD`) dağıtılmaz; komisyon kesilmez; ödül 0 coindir.
+5) Rating İzolasyonu: Botlu maçlar oyuncuların Elo/RP puanını veya galibiyet sayısını değiştirmez.
+6) Liderlik Tablosu Tecriti: Botlar rekabetçi liderlik tablolarından tamamen filtrelenmiştir (`isBot: false`).
 
-- 2 Kisilik Hizli Duellolar:
-  * 🥉 Bronz Duello:  100 Coin Giris ->  180 Coin Odul (`quick_2`)
-  * 🥈 Gumus Duello:  250 Coin Giris ->  450 Coin Odul (`quick_2_silver`)
-  * 🥇 Altin Duello:  500 Coin Giris ->  900 Coin Odul (`quick_2_gold`)
-  * 💎 Elmas Duello: 1000 Coin Giris -> 1800 Coin Odul (`quick_2_diamond`)
 
-- Otomatik Bot Destegi (15 Saniye Kurali):
-  * `MatchmakingService.checkStaleQueues`: Veritabanindaki tum aktif modlari dinamik tarayacak sekilde
-    genisletildi. Hangi lobide beklenirse beklensin, 12-15 saniye icinde insan rakip bulunamazsa
-    oda otomatik botlarla doldurulup mac baslatilir.
-- Lobi Arayuzu (`frontend/src/app/lobby/page.tsx`):
-  * Format secicisi (10 Kisilik Klasik vs 2 Kisilik Hizli) ve 4 kademeli bütçe secim kartlari yerlestirildi.
-  * Bakiye yetersizse buton kilitlenip kirmizi uyari ve "Mağazadan Coin Al" baglantisi gosterilir.
+================================================================================
+BOLUM 5: CIFT KATMANLI CANLILIK (LIVENESS), HEARTBEAT VE OTOMATIK KURTARMA (RECONCILIATION)
+================================================================================
 
-3. CIFTLI LIDERLIK TABLOSU (DUAL LEADERBOARD)
----------------------------------------------
-- `frontend/src/app/leaderboard/page.tsx`:
-  * "Haftalik Kazananlar (Coin)" ve "Genel Derece (RP)" olmak uzere cift sekmeli gosterim eklendi.
-  * Ilk 3 siradaki oyuncuya altin, gumus, bronz taclar ve ozel avatarlar verildi.
+5.1. PROBLEM TANIMI VE ESKİ MİMARİ AÇIĞI
+Eski mimarilerde maçın `createdAt` değerine bakılarak "15 dakikadan eski olan tüm maçları iptal et ve paraları iade et"
+mantığı uygulanıyordu. Bu durum, uzun süren 10 kişilik bir maçta oyuncular 15. dakikada son soruyu çözerken
+sunucunun maçı "terk edilmiş" sanıp aniden iptal etmesine ve oyuncuların emeklerinin boşa gitmesine sebep oluyordu.
 
-4. SISTEM TESTLERI VE VERIFIKASYON
-----------------------------------
-- Vitest Birim & Entegrasyon: 8 test dosyasi, 61/61 test GEÇTİ (%100).
-- Frontend Production Build: `npm run build` (Turbopack, Next.js 16) 0 hata ile 8 rotayi derledi.
-- Canli Tarayici (DOM) Denetimi:
-  * http://localhost:4001 uzerinde subagent ile otomatik test kosuldu.
-  * Lobi mod degisimi (Bronz, Gumus, Altin, Elmas), 10P / 2P gecisleri,
-  * Magaza IAP modal acilisi (Apple StoreKit & Google Play),
-  * EULA / Yasal kosullar penceresi,
-  * Cift sekmeli liderlik tablosu basariyla goruntulendi ve dogrulandi.
-  * Tarayici kayit kaniti: `test_footquiz_ui_1792103496189.webp`
+5.2. ÇİFT KATMANLI KALICI CANLILIK (DOUBLE-LAYER HEARTBEAT)
+FootQuiz, oyunun her adımını canlı tutan ve iki bağımsız katmanda izleyen hibrit bir heartbeat mekanizması geliştirmiştir:
 
-5. GITHUB VE VERCEL DEPLOYMENT SENKRONIZASYONU
-----------------------------------------------
-- Tum kod degisiklikleri `main` dalina commitlendi ve `origin main`e pushlandi.
-- Vercel entegrasyonu tetiklendi. Monorepo yapisinda Root Directory: `frontend` ayari ile
-  uretim dagitimi aktif edildi.
+A) 1. Katman: PostgreSQL Kalıcı Canlılık Sigortası:
+   - Oyun esnasında gerçekleşen her aktivitede veritabanındaki `MatchHold.updatedAt` damgası anlık zamana çekilir:
+     `UPDATE "MatchHold" SET "updatedAt" = NOW() WHERE "matchId" = $roomId AND status = 'HELD'`
+   - Bu sayede Redis sunucusu çökse, yeniden başlasa veya bellek boşaltılsa bile PostgreSQL'deki maç canlılığı ASLA kaybolmaz.
 
-===============================================================================
-[RAPOR SONU - NOVA TARAFINDAN GUNCELI KAYDEDILDI - SURUM 1.5.0 TAMAMLANDI]
-===============================================================================
+B) 2. Katman: Redis Bellek İçi Hızlı Canlılık:
+   - Redis'te `match_activity:${roomId}` anahtarına anlık Unix timestamp yazılır.
+   - `room:${roomId}` JSON nesnesi içindeki `lastActivityAt` alanı güncellenir.
+
+5.3. NABIZ GÜNCELLEME TETİKLEYİCİ NOKTALARI
+Aşağıdaki 5 kritik olay gerçekleştiğinde `GamesService.updateMatchActivity(roomId)` otomatik tetiklenir:
+1. `startGameCountdown`: Maç geri sayımı başladığında.
+2. `startQuestionPhase`: Her yeni soru ekrana geldiğinde.
+3. `submitAnswer`: Oyuncular (veya botlar) cevap gönderdiğinde.
+4. `endQuestionPhase`: Soru süresi dolup puanlar hesaplandığında.
+5. `handleJoinRoom`: Bağlantısı kopan bir oyuncu odaya yeniden bağlandığında (Reconnect).
+
+5.4. OTOMATİK KURTARMA ALGORİTMASI (`reconcileStaleMatches`)
+NestJS `onModuleInit` anında ve sonrasında her 5 dakikada bir periyodik olarak çalışan worker döngüsü:
+1) Durumu `ACTIVE` olan ve `createdAt < NOW() - 15 dakika` olan maçları listeler.
+2) Canlılık Denetimi:
+   - PostgreSQL'deki ilgili `MatchHold.updatedAt` değeri son 15 dakika içinde güncellenmiş mi? -> EVET ise İPTAL ATLANIR.
+   - Redis `match_activity` veya `room.lastActivityAt` son 15 dakika içinde mi? -> EVET ise İPTAL ATLANIR.
+3) Gerçek Terk Edilmişlik Kararı:
+   - Hem PostgreSQL'de hem Redis'te son 15 dakikadır hiçbir aktivite göstermemiş maçlar tespit edilir.
+   - `SELECT ... FOR UPDATE` satır kilidi ile maç atomik olarak `ABORTED` yapılır.
+   - O maça bağlı tüm HELD durumundaki `MatchHold` kayıtları tek bir transaction içinde `REFUNDED` yapılır.
+   - Oyuncuların cüzdanlarına tutar iade edilir ve `MATCH_REFUND` ledger kayıtları düşülür.
+   - Sonuç: Asılı kalan bakiyeler %100 kurtarılır; aktif oynanan hiçbir maç asla yanlışlıkla kapatılmaz.
+
+
+================================================================================
+BOLUM 6: ESLESTIRME (MATCHMAKING) MOTORU, KUYRUKLAR VE BOT EKOSISTEMI
+================================================================================
+
+6.1. EŞLEŞTİRME KUYRUKLARI VE EŞZAMANLILIK KORUMASI
+- Kuyruk Katılımı (`joinQueue`):
+  1. Kullanıcı aktif bir odada mı kontrol edilir (`player_room:${userId}`).
+     Eğer eski bir bitmiş odada kalmışsa self-healing ile temizlenir, aktif odada ise engellenir.
+  2. Dağıtık kilit alınır: `SET player_queue_lock:${userId} NX EX 5`.
+     Kullanıcının birden fazla sekmeyle aynı anda farklı kuyruklara girmesi engellenir.
+  3. Cüzdandan giriş ücreti bloke edilir (`holdEntryFee`).
+  4. Redis kuyruğuna eklenir: `LPUSH matchmaking_queue:{gameModeId} ${userId}`.
+  5. `tryMatch` çalıştırılarak tam oda sayısı (2 veya 10) kontrol edilir.
+
+6.2. 12-15 SANİYE KURALI VE OTOMATİK BOT BACKFILL SİSTEMİ
+Kullanıcıların boş lobilerde sonsuza kadar beklemesini önlemek için 2 kademeli bot tamamlama mekanizması kurulmuştur:
+A) İstemci Bazlı Zamanlayıcı (Timeout Fallback):
+   - Kuyruğa giren oyuncu için 12 saniyelik bir `setTimeout(() => this.backfillWithBots(...), 12000)` başlatılır.
+B) Arka Plan Kuyruk Denetleyicisi (`checkStaleQueues`):
+   - `MatchmakingService` bünyesinde her 3 saniyede bir çalışan arka plan motoru tüm aktif oyun modlarını tarar.
+   - Kuyruktaki herhangi bir oyuncunun bekleme süresi 12 saniyeyi geçmişse derhal bot backfill tetiklenir.
+C) Dağıtık Bot Kilidi (`backfill_lock:{gameModeId}`):
+   - `setNX` ile 10 saniyelik kilit alınır. Birden fazla sunucunun veya zamanlayıcının aynı anda çift bot ekleyip
+     aynı oyuncuyu iki farklı maça sokması kesin olarak engellenir.
+
+6.3. BOT EKOSİSTEMİ VE BECERİ MATRİSİ (`BotService`)
+- Bot Profilleri: Veritabanında hazır 20 adet doğrulanmış bot hesabı (`bot1@footquiz.local` ... `bot20@footquiz.local`).
+- Dinamik Fallback: Eğer anlık yoğunlukta 20 bot yetersiz kalırsa bellek üzerinde anında dinamik bot profilleri
+  (`bot_fallback_*`) üretilerek maçlar asla eksik başlatılmaz.
+- Deterministik Beceri Dağılımı:
+  Bot ID'sinin sayısal özetine (hash) göre 3 beceri sınıfı belirlenir:
+  * %25 Acemi Botlar:  %60 Doğruluk Oranı (Hatalı şıkları seçme olasılığı yüksek)
+  * %50 Normal Botlar: %75 Doğruluk Oranı (Dengeli rekabetçi deneyim)
+  * %25 Usta Botlar:   %90 Doğruluk Oranı (Zorlu rakip simülasyonu)
+  * Ağırlıklı Sistem Ortalaması: 0.25*0.60 + 0.50*0.75 + 0.25*0.90 = %75.45 doğruluk.
+- İnsan Benzeri Yanıt Gecikmesi (`simulateAnswer`):
+  Botlar sorular açıldıktan hemen sonra cevap vermez. Soru süresine bağlı olarak 2000ms ile 6000ms arasında
+  rastgele bir düşünme süresi sonrasında `submitAnswer` tetikler.
+
+6.4. KOPMA GÜVENLİĞİ (`handleUserDisconnect`)
+Kullanıcı kuyrukta beklerken tarayıcı sekmesini kapatır veya interneti koparsa:
+- Socket.io `disconnect` olayı tetiklenir.
+- `MatchmakingService.handleUserDisconnect(userId)` çağrılır.
+- Kullanıcı kuyruktan çıkarılır, bloke bakiyesi `refundHoldRecord` ile anında ve eksiksiz iade edilir.
+
+
+================================================================================
+BOLUM 7: OYUN MOTORU (GAMES SERVICE), SORU SECIMI VE SKORLAMA FORMULLERI
+================================================================================
+
+7.1. SORU HAVUZU VE BENZERSİZ SORU SEÇİCİ (`QuestionSelector`)
+- Veritabanındaki soru havuzu `prisma/questions.json` üzerinden tohumlanmıştır (1200+ satır, zengin futbol bilgisi).
+- Fisher-Yates Karıştırma Algoritması: Sorular homojen ve rastgele dağıtılır.
+- Maç İçi Tekrarsızlık Garantisi: Bir maç içerisinde aynı soru veya varyantı asla ikinci kez seçilemez.
+- Eksik Soru Koruması: Veritabanında soru kalmaması durumunda sunucu sessizce çökmek yerine `NO_QUESTIONS`
+  koduyla odayı bilgilendirir ve güvenle sonlandırır.
+
+7.2. GERÇEK ZAMANLI SORU DÖNGÜSÜ (SERVER-AUTHORITATIVE LOOP)
+Oyun akışı tamamen sunucu otoritesi altındadır:
+1) Geri Sayım Evresi (`startGameCountdown`):
+   - Odaya `game_countdown` olayı ile `timeLeft: 3` yayını yapılır.
+   - Soru seçimi bu evrede tamamlanır. 3 saniye sonra ilk soru başlar.
+2) Soru Başlangıç Evresi (`startQuestionPhase`):
+   - Sunucu `questionEndsAt = Date.now() + durationMs` hesaplar.
+   - İstemciye `question_started` paketi ile `text`, `metadata`, `durationMs`, `questionEndsAt` ve `serverTime` gönderilir.
+   - KRİTİK GÜVENLİK: `correctAnswer` istemci paketine ASLA dahil edilmez (Client-side hile koruması).
+3) Cevap Gönderme (`submitAnswer`):
+   - Kullanıcı cevabını soket üzerinden iletir.
+   - Sunucu Zaman Otoritesi: `Date.now() > questionEndsAt + 1000` ise cevap reddedilir (1000ms Grace Period / Ağ toleransı).
+   - Mükerrer Cevap Kilidi: Kullanıcı aynı soru için yalnızca 1 kez cevap verebilir; ikinci tıklamalar engellenir.
+4) Soru Bitiş Evresi (`endQuestionPhase`):
+   - 10 saniye süre dolduğunda sunucu doğru cevabı (`correctAnswer`) ve oyuncuların kazandığı puanları (`playerResults`) açıklar.
+   - `score_updated` olayı ile canlı maç skor tablosu yayınlanır.
+   - Sonraki soruya geçiş için 5 saniye mola verilir; son soru ise 4 saniye sonra `finishGame` çağrılır.
+
+7.3. SKOR HESAPLAMA FORMÜLLERİ (`ScoringEngine`)
+Soru tiplerine göre uygulanan matematiksel puanlama kuralları:
+- `MULTIPLE_CHOICE` (Çoktan Seçmeli):
+  * Doğru Cevap: +1000 Puan
+  * Yanlış Cevap: 0 Puan
+- `ESTIMATION` (Sayısal Tahmin):
+  * Tam İsabet (`diff === 0`): +1000 Puan
+  * %10 Marj Kuralı: Doğru cevabın %10'u kadar yanılma payı (`margin = correct * 0.10`) kabul edilir.
+  * Formül: `Score = floor((1 - (abs(given - correct) / margin)) * 1000)`
+  * Marj dışındaki tahminler: 0 Puan.
+- `RANKING` (Sıralama):
+  * Tüm sıralamanın tam ve eksiksiz doğru dizilmesi durumunda: +1000 Puan.
+- Özel Tipler (`PLAYER_GUESS`, `HARD_QUESTION`, `FINAL`):
+  * Sırasıyla +1000, +1500 ve +2000 puan baremleri uygulanır.
+
+7.4. MAÇ BİTİMİ VE ÖDÜL DAĞITIMI (`finishGame`)
+- Dağıtık Bitiş Kilidi: `finish_lock:${roomId}` (SET NX) ile maçın mükerrer kapatılması engellenir.
+- Sıralama: Oyuncular skorlarına göre büyükten küçüğe dizilir; en yüksek skoru alan `winnerId` olur.
+- Pot Hesabı (Rekabetçi Mod):
+  * `totalPot = entryFee * player_count`
+  * `houseFee = Math.floor(totalPot * 0.10)` (%10 sistem komisyonu)
+  * `prizePool = totalPot - houseFee`
+- `walletService.settleMatch` çağrılır; kazananın bakiyesi artırılır, +20 RP eklenir, galibiyet sayısı artırılır.
+- İnsan oyunculara `wallet_updated` soket olayı gönderilerek cüzdanlarının anında yenilenmesi sağlanır.
+- Odaya `game_finished` paketi ile kazanan, detaylı puan tablosu ve kazanılan ödüller duyurulur.
+
+
+================================================================================
+BOLUM 8: KADEMELI BUTCE LOBILERI (TIERED BUDGET LOBBIES - 8 OYUN MODU)
+================================================================================
+
+8.1. EKONOMİK KADEMELER VE ÖDÜL TABLOSU
+Platform, farklı bakiye seviyelerindeki oyunculara hitap etmek amacıyla 4 bütçe kademesi ve 2 format
+olmak üzere toplam 8 oyun modu sunar:
+
++--------------------+-----------+------------+------------+---------------+----------------+
+| Kademe Adı         | Format    | Mod Kodu   | Giriş (Fee)| Ödül Potu     | Komisyon (%10) |
++--------------------+-----------+------------+------------+---------------+----------------+
+| 🥉 Bronz Lobi      | 10 Kişi   | classic_10 | 100 Coin   | 900 Coin      | 100 Coin       |
+| 🥈 Gümüş Lobi      | 10 Kişi   | classic_10_silver | 250 Coin | 2,250 Coin  | 250 Coin       |
+| 🥇 Altın Lobi      | 10 Kişi   | classic_10_gold   | 500 Coin | 4,500 Coin  | 500 Coin       |
+| 💎 Elmas Lobi      | 10 Kişi   | classic_10_diamond| 1000 Coin| 9,000 Coin  | 1,000 Coin     |
++--------------------+-----------+------------+------------+---------------+----------------+
+| 🥉 Bronz Düello    | 2 Kişi    | quick_2    | 100 Coin   | 180 Coin      | 20 Coin        |
+| 🥈 Gümüş Düello    | 2 Kişi    | quick_2_silver    | 250 Coin | 450 Coin    | 50 Coin        |
+| 🥇 Altın Düello    | 2 Kişi    | quick_2_gold      | 500 Coin | 900 Coin    | 100 Coin       |
+| 💎 Elmas Düello    | 2 Kişi    | quick_2_diamond   | 1000 Coin| 1,800 Coin  | 200 Coin       |
++--------------------+-----------+------------+------------+---------------+----------------+
+
+8.2. OTOMATİK VERİTABANI GÜVENCESİ
+`DbBootstrapService` uygulama her başladığında bu 8 oyun modunun PostgreSQL `GameMode` tablosundaki
+varlığını ve ayarlarını (`maxPlayers`, `questionCount`, `questionDuration`, `entryFee`) kontrol eder;
+eksik modları anında ve otomatik olarak tohumlar (upsert).
+
+8.3. LOBİ ARAYÜZÜ KULLANICI DENEYİMİ (`frontend/src/app/lobby/page.tsx`)
+- Üst Format Seçici: 10 Kişilik Klasik Turnuva veya 2 Kişilik Hızlı Düello butonları.
+- 4 Renkli Kart Tasarımı:
+  * Bronz: Amber ve koyu bronz geçişli kart.
+  * Gümüş: Metalik gri ve arduvaz geçişli kart.
+  * Altın: Parlayan altın ve kehribar rengi kart, `FIRSAT` rozeti (500 Giriş -> 4500 Ödül).
+  * Elmas: Cam göbeği ve neon mavi ışıltılı kart, `HIGH ROLLER` rozeti.
+- Bakiye Koruması: Oyuncunun bakiyesi seçili lobinin giriş ücretinden az ise buton grileşir,
+  kırmızı bakiye yetersiz uyarısı çıkar ve "Mağazadan Coin Al" bağlantısı belirir.
+
+
+================================================================================
+BOLUM 9: UYGULAMA ICI SATIN ALIM (IAP), VIP PAS VE MONETIZASYON ALTYAPISI
+================================================================================
+
+9.1. IAP ÜRÜN VE ABONELİK KATALOĞU
+Mobil ve web platformlarında geçerli resmi IAP kataloğu:
+- `starter_500`: 500 Coin (29.99 TL / $0.99) - Başlangıç paketi.
+- `pro_1500`: 1.650 Coin [%10 Bonus] (69.99 TL / $1.99) - En çok tercih edilen.
+- `elite_4000`: 4.600 Coin [%15 Bonus] (149.99 TL / $4.99) - Fırsat paketi.
+- `legend_12000`: 14.500 Coin [%21 Bonus] (299.99 TL / $9.99) - Dev indirim.
+- `vip_monthly`: VIP Pass Aylık Abonelik (79.99 TL / $2.99) - Özel abonelik paketi.
+
+9.2. VIP PASS AYRICALIKLARI
+- Reklamsız Deneyim: Tüm banner ve geçiş reklamları kaldırılır.
+- Günlük Giriş Bonusu: Her gün ilk girişte cüzdana otomatik +100 Coin yüklenir.
+- 2x RP Sıralama Çarpanı: Galibiyetlerde iki kat Elo/RP puanı kazanılır.
+- Altın VIP Rozeti: İsim yanında özel ışıltılı altın taç ikonu gösterilir.
+- Abonelik Yönetimi: Redis üzerinde `user_vip:${userId}` anahtarı ile TTL takipli tutulur.
+
+9.3. GÜVENLİK, MAKBUZ DOĞRULAMA VE ANTI-REPLAY
+- Google Play Billing (`verifyGooglePlayPurchase`): `purchaseToken` ve `orderId` ayrıştırılır.
+- Apple StoreKit 2 (`verifyAppleAppStorePurchase`): `transactionId` ve JWS makbuz verisi denetlenir.
+- Anti-Replay Güvenliği: `referenceId = iap_google_${orderId}` veya `iap_apple_${transactionId}`
+  kaydı `CoinTransaction` tablosunda aranır. Daha önce işlenmiş bir makbuz tekrar gönderilirse mükerrer
+  coin yüklemesi yapılmaz; mevcut bakiye dönülür.
+
+9.4. SATIN ALIMLARI GERİ YÜKLE (RESTORE PURCHASES)
+Apple App Store Review Guidelines Madde 3.1.1 gereğince zorunlu olan akış:
+- `ShopService.restorePurchases(userId)`: Kullanıcının geçmiş IAP işlemlerini ve Redis VIP durumunu sorgular.
+- Cihaz değiştiren veya uygulamayı yeniden yükleyen kullanıcıların hakları tek tıkla geri yüklenir.
+
+9.5. ÖDÜLLÜ REKLAM SİSTEMİ (`claimAdReward`)
+- Reklam izleyen kullanıcılara `DAILY_REWARD` referansıyla +50 Coin yüklenir.
+- Redis Cooldown Koruması: `user_ad_cooldown:${userId}` anahtarı ile her ödül arasında 15 saniyelik zorunlu bekleme süresi uygulanır; spam engellenir.
+
+9.6. YASAL UYUMLULUK VE SÖZLEŞMELER (`LegalTermsModal.tsx`)
+Apple ve Google mağaza onayları için zorunlu olan Son Kullanıcı Lisans Sözleşmesi (EULA),
+Kullanım Koşulları ve Gizlilik Politikası metinleri modala entegre edilmiştir.
+
+
+================================================================================
+BOLUM 10: CIFTLI LIDERLIK TABLOSU (DUAL LEADERBOARD) VE DERECELENDIRME
+================================================================================
+
+10.1. ÇİFT SEKME MİMARİSİ (`frontend/src/app/leaderboard/page.tsx`)
+Liderlik sayfası iki farklı rekabet boyutunu sergiler:
+1) "Genel Derece (RP)": Oyuncuların Elo puanlarına göre sıralandığı prestij tablosu.
+2) "Haftalık Kazananlar (Galibiyet)": Oyuncuların toplam maç galibiyetine göre sıralandığı dinamik tablo.
+
+10.2. BOTLARIN TAM İZOLASYONU
+`LeaderboardService.getGlobalLeaderboard` veritabanı sorgusunda kesin filtre:
+```typescript
+where: {
+  user: {
+    isBot: false,
+  },
+}
+```
+Hiçbir bot hesabı, kazandığı maç ne olursa olsun insan oyuncuların liderlik sıralamasını işgal edemez.
+
+10.3. YÜKSEK PERFORMANS İÇİN REDIS ÖNBELLEKLEME
+Liderlik tablosu her çağrıldığında veritabanına yük bindirmemek için `leaderboard:global:${sortType}:top_100`
+anahtarında 30 saniye boyunca Redis'te önbelleğe alınır.
+
+10.4. GÖRSEL PODYUM TASARIMI
+İlk 3 sıradaki şampiyonlar için özel görsel kartlar tasarlanmıştır:
+- 1. Sıra: Büyük Altın Taç (`👑`), Altın ışıltılı çerçeve ve Şampiyon unvanı.
+- 2. Sıra: Gümüş Taç, Parlak gümüş çerçeve.
+- 3. Sıra: Bronz Taç, Bronz çerçeve.
+
+
+================================================================================
+BOLUM 11: KENDINI IYILESTIRME VE DIRENC MIMARISI (SELF-HEALING BOOTSTRAP)
+================================================================================
+
+11.1. `DbBootstrapService` OTONOM KONTROLCÜSÜ
+Canlı Render/Production ortamlarında veritabanı geçişlerinin eksik kalması veya seed verilerinin silinmesi
+durumunda uygulamanın kilitlenmesini önlemek için NestJS `OnApplicationBootstrap` kancasında çalışan
+otonom kendini iyileştirme servisi geliştirilmiştir:
+
+Kontrol ve Onarım Aşamaları:
+1. `ensureSchema`: `MatchHold` tablosunu ve `CoinTransaction_userId_type_referenceId_key` tekil indeksini kontrol eder, yoksa anında oluşturur.
+2. `ensureGameModes`: 8 kademeli oyun modunu kontrol eder, eksikleri veritabanına ekler.
+3. `ensureBots`: Veritabanında en az 20 bot hesabının ve cüzdanının hazır olduğunu doğrular; eksikleri üretir.
+4. `ensureQuestions`: Veritabanında en az 10 soru olduğunu teyit eder; yoksa `questions.json`'dan yükler.
+
+11.2. ÜRETİM DAĞITIM HATTI (`start:prod`)
+Backend `package.json` dosyasındaki çalıştırma betiği:
+`"start:prod": "prisma migrate deploy && node dist/main"`
+şeklinde güncellenerek her dağıtımda migration'ların otomatik uygulanması garanti altına alınmıştır.
+
+
+================================================================================
+BOLUM 12: DOGRULANMIS TEST METRIKLERI VE KALITE GUVENCESI (QA AUDIT SUITE)
+================================================================================
+
+12.1. TEST ÖZET TABLOSU
+FootQuiz altyapısı aşağıdaki test paketleriyle %100 oranında doğrulanmıştır:
+
++-----------------------------------------+--------------------+-------------------+---------------+
+| Test Kategorisi                         | Dosya / Araç       | Başarılı / Toplam | Başarı Oranı  |
++-----------------------------------------+--------------------+-------------------+---------------+
+| Gerçek Altyapı Eşzamanlılık Testleri    | test-real-infra.ts | 20 / 20 Senaryo   | %100 GEÇTİ    |
+| Uçtan Uca MVP Kabul Denetimi            | test-e2e-mvp-audit | 10 / 10 Senaryo   | %100 GEÇTİ    |
+| Vitest Birim & Entegrasyon Paketi       | npm test (8 dosya) | 61 / 61 Test      | %100 GEÇTİ    |
+| Next.js Frontend Production Derlemesi   | npm run build      | 8 Rota Derlendi   | 0 Hata / Uyum |
+| Canlı Tarayıcı DOM Otomasyon Denetimi   | Browser Subagent   | UI Video Kaydı    | %100 Doğruluk |
++-----------------------------------------+--------------------+-------------------+---------------+
+
+12.2. GERÇEK ALTYAPI TESTLERİ DETAY DÖKÜMÜ (`test-real-infra.ts` - 20/20)
+Docker PostgreSQL (5433) ve Redis (6379) üzerinde koşan testler:
+- Test 1: 5 paralel eşzamanlı `holdEntryFee` talebinde yalnızca 1'inin başarılı olması, bakiyenin eksiye düşmemesi.
+- Test 2: İki eşzamanlı `settleMatch` çağrısında tek bir kazanan ödülü üretilmesi (Zero duplicate minting).
+- Test 3: Aynı kullanıcının farklı maçlardaki bağımsız hold kayıtlarının birbirini etkilememesi.
+- Test 4: Settle + Refund + Reconcile üçlü çakışma yarışında tek yönlü durum geçişi garantisi.
+- Test 5: İki bağımsız backend process simülasyonunda `SELECT ... FOR UPDATE` cross-process kilit koruması.
+- Test 6: Transaction ortasında veri tabanı kesintisi ve crash recovery (Atomik rollback, veri kaybı 0).
+- Test 7: Ağ kesintisi sonrası idempotent retry çağrılarının sistemi bozmaması.
+- Test 8: Soru döngüsü, cevap ve sayaç liveness güncellemelerinin 15 dakikalık koruma sağlaması.
+- Test 9: Redis anahtarı silinse veya kaybolsa dahi PostgreSQL kalıcı liveness ile maçın korunması.
+- Test 10: Eşzamanlı çalışan iki reconciliation worker yarışında çakışma olmaması.
+- Test 11: Hold durumunun (REFUNDED vs SETTLED) karşılıklı dışlayıcılığı.
+- Test 12: PvE bot maçında insan oyuncunun bakiyesi, komisyonu, galibiyet ve rating koruması (0 inflation).
+- Test 13-20: Dinamik bot fallback, bütçe lobi geçişleri, IAP makbuz tekrar koruması, VIP pass Redis TTL doğrulaması.
+
+12.3. UÇTAN UCA MVP KABUL DENETİMİ (`test-e2e-mvp-audit.ts` - 10/10)
+- Senaryo 1: Misafir kullanıcı oluşturma ve JWT token üretimi.
+- Senaryo 2: Bakiye bloke etme ve yetersiz bakiye hata fırlatma doğrulaması.
+- Senaryo 3: 2 kişilik ve 10 kişilik bot backfill akışı.
+- Senaryo 4: Soru seçimi ve istemciye doğru cevabın gönderilmediğinin kanıtı.
+- Senaryo 5: Sunucu zaman otoritesi ve 1000ms grace period testi.
+- Senaryo 6: Mükerrer cevap gönderme engeli.
+- Senaryo 7: Başka oyuncu adına cevap gönderme (Impersonation) engeli.
+- Senaryo 8: Yeniden bağlanma (reconnect) durumunda oda ve soru durumunun korunması.
+- Senaryo 9: Tek seferlik settlement ve komisyon kesinti doğrulaması.
+- Senaryo 10: PvE maç kurallarının uçtan uca eksiksiz uygulanması.
+
+
+================================================================================
+BOLUM 13: GUVENLIK ANALIZI, BULGULAR VE P1/P2 EYLEM RECETELERI
+================================================================================
+
+13.1. GÜVENLİK SEVİYESİ KARNESİ
+- P0 Güvenlik Seviyesi (Finansal Ekonomi, Hold Yaşam Döngüsü, PvE Koruması, Ledger Bütünlüğü):
+  * DURUM: %100 TAMAMLANDI VE ONAYLANDI.
+- P1 Güvenlik Seviyesi (Uygulama İçi Yetkilendirme, Hız Sınırlama, Giriş Doğrulama):
+  * DURUM: AÇIK BULGULAR MEVCUT (Aşağıdaki hazır kod reçeteleriyle uygulanacaktır).
+
+13.2. AÇIK P1 BULGULARI VE UYGULAMA REÇETELERİ
+
+📌 P1.1: WebSocket `join_room` Yetkilendirmesi (Oda İzolasyonu & Spoofing Engeli)
+- Hedef Dosya: `backend/src/gateway/game.gateway.ts` (satır 88-98)
+- Risk: Kötü niyetli bir kullanıcı başka bir odanın `roomId` bilgisini tahmin ederek o odaya soket düzeyinde katılabilir.
+- Hazır Kod Reçetesi:
+  ```typescript
+  @SubscribeMessage('join_room')
+  async handleJoinRoom(
+    @MessageBody() data: { roomId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const userId = this.clientMapping.get(client.id);
+    if (!userId || !data.roomId) return;
+
+    // Kullanıcının gerçekten bu odada olup olmadığını Redis'ten doğrula
+    const assignedRoom = await this.matchmakingService.getPlayerRoom(userId);
+    if (assignedRoom !== data.roomId) {
+      this.logger.warn(`Yetkisiz oda katılım girişimi: User ${userId} -> Room ${data.roomId}`);
+      client.emit('error', { code: 'UNAUTHORIZED_ROOM', message: 'Bu odaya katılma yetkiniz yok.' });
+      return;
+    }
+
+    client.join(data.roomId);
+    await this.gamesService.updateMatchActivity(data.roomId);
+  }
+  ```
+
+📌 P1.2: HTTP API Rate Limiting (DDoS & Brute-Force Koruması)
+- Paket: `@nestjs/throttler`
+- Hedef Dosyalar: `backend/src/app.module.ts`, `backend/src/auth/auth.controller.ts`
+- Risk: `POST /auth/guest` endpoint'ine botlarla yüz binlerce misafir hesap açma saldırısı yapılabilir.
+- Hazır Kod Reçetesi:
+  `app.module.ts` içine:
+  ```typescript
+  ThrottlerModule.forRoot([{
+    ttl: 60000, // 1 dakika
+    limit: 60,  // dakikada 60 istek
+  }]),
+  ```
+  `auth.controller.ts` içine `@Throttle({ default: { limit: 10, ttl: 60000 } })` eklenerek misafir hesap açılışı dakikada 10 ile sınırlandırılacaktır.
+
+📌 P1.3: Global Giriş Doğrulama (ValidationPipe)
+- Paketler: `class-validator`, `class-transformer`
+- Hedef Dosya: `backend/src/main.ts`
+- Risk: API controller'larına tanımsız veya zararlı gövde (body) payload'ları gönderilebilir.
+- Hazır Kod Reçetesi:
+  ```typescript
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+  ```
+
+📌 P1.4: CORS ve WebSocket Origin Kısıtlaması
+- Hedef Dosyalar: `backend/src/main.ts`, `backend/src/gateway/game.gateway.ts`
+- Mevcut Durum: `app.enableCors()` ve `cors: { origin: '*' }` (Wildcard açık).
+- Hazır Kod Reçetesi:
+  `const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:4001';` tanımlanarak CORS yalnızca izin verilen frontend alan adına bağlanmalıdır.
+
+13.3. P2 DESTEKLEYİCİ BULGULAR
+- `JWT_SECRET` Fail-Fast Kontrolü: Ortam değişkeni tanımlı değilse sunucu açılışta çökmeli (fail-fast), varsayılan fallback metni kullanılmamalıdır.
+- Healthcheck Endpoint: `app.controller.ts` içinde hem PostgreSQL'e (`SELECT 1`) hem Redis'e (`PING`) istek atan `/health` rotası açılmalıdır.
+- Otomatik Yedekleme Prosedürü: Render/Postgres üzerinde günlük `pg_dump` cron görevi tanımlanmalıdır.
+
+
+================================================================================
+BOLUM 14: GELISTIRICI, DEVOPS VE YEREL BASLATMA OPERASYON KILAVUZU
+================================================================================
+
+14.1. YEREL GELİŞTİRME ORTAMI BAŞLATMA ADIMLARI
+Projeyi yerel makinede sıfırdan çalıştırmak için:
+
+1) Docker Servisleri (PostgreSQL & Redis):
+   ```powershell
+   # Docker Desktop açık değilse başlatın:
+   explorer.exe "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+   # Konteynerleri ayağa kaldırın:
+   cd c:\Users\Alperen\Desktop\Footrace
+   docker compose up -d
+   ```
+   * PostgreSQL: `localhost:5433` (Kullanıcı: root, Şifre: rootpassword, DB: footquiz)
+   * Redis: `localhost:6379`
+
+2) Backend Dev Sunucusu:
+   ```powershell
+   cd c:\Users\Alperen\Desktop\Footrace\backend
+   npm run start:dev
+   ```
+   * Sunucu http://localhost:4000 üzerinde başlar.
+   * `DbBootstrapService` otomatik çalışarak şema ve modları kontrol eder.
+
+3) Frontend Dev Sunucusu:
+   ```powershell
+   cd c:\Users\Alperen\Desktop\Footrace\frontend
+   npm run dev
+   ```
+   * Uygulama http://localhost:4001 üzerinde açılır (Next.js 16 App Router).
+
+14.2. HIZLI SORUN GİDERME REHBERİ (TROUBLESHOOTING)
+- Sorun 1: Lobi butonunda "SUNUCUYA BAĞLANILIYOR..." yazıyor ve tıklanmıyor.
+  * Sebep: Port 4000'deki NestJS sunucusu veya Docker Redis kapalıdır.
+  * Çözüm: `docker ps` ile konteynerleri, terminalde `npm run start:dev` durumunu kontrol edin.
+- Sorun 2: "Bakiye yetersiz!" uyarısı veriyor.
+  * Çözüm: Sağ üstteki Mağaza butonuna tıklayarak mağazadan paket satın alın veya lobi altındaki reklam butonuna tıklayarak +50 Coin kazanın.
+- Sorun 3: Veritabanını tamamen sıfırlamak ve yeniden tohumlamak gerekirse:
+  ```powershell
+  cd c:\Users\Alperen\Desktop\Footrace\backend
+  npx prisma db push --force-reset
+  npx tsx prisma/seed.ts
+  ```
+
+14.3. CANLI ORTAM YAPILANDIRMA MATRİSİ (ENV MATRIX)
+A) Backend Ortam Değişkenleri (.env):
+   - `DATABASE_URL`: `postgresql://root:rootpassword@localhost:5433/footquiz?schema=public` (Canlıda Render Postgres URL)
+   - `REDIS_HOST`: `localhost` (Canlıda Render Redis Host)
+   - `REDIS_PORT`: `6379`
+   - `JWT_SECRET`: Güçlü 64-karakterlik şifreleme anahtarı
+   - `PORT`: `4000`
+   - `FRONTEND_URL`: `https://footrace-frontend.vercel.app`
+
+B) Frontend Ortam Değişkenleri (.env.local):
+   - `NEXT_PUBLIC_API_URL`: `http://localhost:4000` (Canlıda Render backend URL: `https://footrace-6lnc.onrender.com`)
+
+
+================================================================================
+BOLUM 15: PROJE YOL HARITASI VE GELECEK VIZYONU (ROADMAP)
+================================================================================
+
+15.1. FAZ 1 (TAMAMLANDI - v1.5.0):
+- [x] Gerçek zamanlı WebSocket altyapısı ve oda yönetimi.
+- [x] P0 Finansal ekonomi, MatchHold yaşam döngüsü ve composite ledger.
+- [x] PvE Antrenman modu ve botlu maç güvenlik anayasası.
+- [x] 15 saniye zaman aşımı ve 20 botlu deterministik zekâ simülasyonu.
+- [x] 4 Kademeli Bütçe Lobileri (Bronz, Gümüş, Altın, Elmas - 8 Mod).
+- [x] Google Play & Apple App Store uyumlu IAP mağazası, VIP Pass ve Restore Purchases.
+- [x] Çift sekmeli liderlik tablosu (RP Derecesi & Galibiyetler).
+- [x] 20 Altyapı + 10 E2E + 61 Vitest testi ile %100 doğrulama.
+- [x] GitHub (`main`) ve Vercel canlı dağıtım senkronizasyonu.
+
+15.2. FAZ 2 (SIRADAKİ HEDEFLER - v1.6.0 Pre-Launch):
+- [ ] P1 Güvenlik Sertifikasyonu:
+      * WebSocket `join_room` oda izolasyonu ve spoofing kalkanı.
+      * `@nestjs/throttler` ile IP bazlı rate limiting.
+      * Global `ValidationPipe` ile DTO doğrulaması.
+      * CORS ve origin kısıtlaması.
+- [ ] Oyun İçi Ses Efektleri (SFX) ve Atmosfer Müziği:
+      * Doğru/yanlış cevap sesleri, geri sayım tik-tak sesi, maç kazanma jingle'ı.
+- [ ] Özel Arkadaş Odası (Private Friendly Match):
+      * 6 haneli oda kodu ile arkadaşlar arasında giriş ücretli veya ücretsiz düellolar.
+- [ ] Push Notification Altyapısı:
+      * VIP günlük bonus hatırlatması ve haftalık turnuva bildirimleri.
+
+15.3. FAZ 3 (MOBİL MAĞAZA LANSMANI - v2.0.0):
+- [ ] Capacitor / React Native wrapper entegrasyonu.
+- [ ] Google Play Console ve Apple App Store Submission paketleri (.aab ve .ipa).
+- [ ] Canlı Multiplayer Haftalık Nakit/Büyük Ödül Turnuvaları.
+
+================================================================================
+[RAPOR SONU - NOVA TARAFINDAN GUNCELI KAYDEDILDI - SURUM 1.5.0 MASTER CERTIFIED]
+================================================================================

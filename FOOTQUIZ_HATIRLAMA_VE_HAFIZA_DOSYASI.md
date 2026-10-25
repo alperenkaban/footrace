@@ -1,7 +1,7 @@
 # FOOTQUIZ — PROJE HAFIZA VE HATIRLAMA DOSYASI (CHECKPOINT)
 
 > **Asistan:** Nova  
-> **Tarih:** 16 Ekim 2026  
+> **Tarih:** 26 Ekim 2026  
 > **Konum:** Kök Dizin (`c:\Users\Alperen\Desktop\Footrace\FOOTQUIZ_HATIRLAMA_VE_HAFIZA_DOSYASI.md`)  
 > **Bağlı Mimari Rapor:** `c:\Users\Alperen\Desktop\Footrace\FOOTQUIZ_MIMARI_VE_PROJE_RAPORU.txt`  
 > **Mevcut Sürüm Durumu:** Sürüm 1.5.0 — Google Play & App Store IAP, Kademeli Bütçe Lobileri (500 Giriş / 4500 Ödül), Canlı Testler ve Vercel Güncellemesi
