@@ -1,14 +1,15 @@
 import { Controller, Post, Get, Body, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { AuthGuard } from '@nestjs/passport';
+import { GuestLoginDto } from './dto/guest-login.dto.js';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('guest')
-  async guestLogin(@Body('displayName') displayName: string) {
-    return this.authService.createGuestUser(displayName);
+  async guestLogin(@Body() dto: GuestLoginDto) {
+    return this.authService.createGuestUser(dto?.displayName);
   }
 
   // --- Google OAuth ---

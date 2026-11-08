@@ -38,6 +38,7 @@ export class MatchmakingService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Kuyrukta 12 saniyeden uzun süre bekleyen oyuncuları tespit edip botlarla oyunu başlatır.
+   * Kuyruk yapısını bozmamak için oyuncular doğrudan getQueuePlayers (LRANGE) ile taranır.
    */
   private async checkStaleQueues() {
     try {
@@ -49,7 +50,7 @@ export class MatchmakingService implements OnModuleInit, OnModuleDestroy {
       for (const mode of activeModes) {
         const modeId = mode.name;
         const queueName = `matchmaking_queue:${modeId}`;
-        const players = await this.redisService.dequeuePlayers(queueName, 20, false);
+        const players = await this.redisService.getQueuePlayers(queueName);
         if (!players.length) continue;
 
         let hasStalePlayer = false;
@@ -60,11 +61,6 @@ export class MatchmakingService implements OnModuleInit, OnModuleDestroy {
             hasStalePlayer = true;
             break;
           }
-        }
-
-        // Oyuncuları kuyruğa geri koy
-        for (const pid of players) {
-          await this.redisService.enqueuePlayer(queueName, pid);
         }
 
         if (hasStalePlayer) {
@@ -84,7 +80,7 @@ export class MatchmakingService implements OnModuleInit, OnModuleDestroy {
   async joinQueue(userId: string, gameModeId: string): Promise<void> {
     const queueName = `matchmaking_queue:${gameModeId}`;
     
-    // 1. Zaten aktif bir odada mı kontrol et (GAME_FINISHED veya silinmiş odalar için self-healing)
+    // 1. Zaten aktif bir odada mı kontrol et (GAME_FINISHED odalar için self-healing)
     const existingRoom = await this.redisService.get(`player_room:${userId}`);
     if (existingRoom) {
       const roomData = await this.redisService.get(`room:${existingRoom}`);
@@ -202,54 +198,133 @@ export class MatchmakingService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async startMatch(gameModeId: string, players: string[]) {
+    // Çoklu instance / eşzamanlı eşleşme koruması:
+    // Oyuncuların aktif başka bir odada olup olmadığını kontrol et ve atomik olarak sahiplen
     const roomId = uuidv4();
-    this.logger.log(`Match found! Room: ${roomId}, Players: ${players.join(', ')}`);
+    const uniquePlayers = Array.from(new Set(players));
+    const validPlayers: string[] = [];
+
+    for (const p of uniquePlayers) {
+      const currentRoom = await this.redisService.get(`player_room:${p}`);
+      if (currentRoom) {
+        const roomData = await this.redisService.get(`room:${currentRoom}`);
+        let active = false;
+        if (roomData) {
+          try {
+            const parsed = JSON.parse(roomData);
+            if (parsed.status !== 'GAME_FINISHED') active = true;
+          } catch {}
+        }
+        if (active) {
+          this.logger.warn(`Player ${p} is already in active room ${currentRoom}, skipping room assignment`);
+          continue;
+        } else {
+          // Biten odayı temizle
+          await this.redisService.del(`player_room:${p}`);
+        }
+      }
+
+      // Atomik sahiplenme: Aynı oyuncunun eşzamanlı iki ayrı odaya atanmasını engeller
+      const claimed = await this.redisService.setNX(`player_room:${p}`, roomId, 3600);
+      if (!claimed) {
+        this.logger.warn(`Player ${p} concurrently claimed by another room, skipping room assignment`);
+        continue;
+      }
+      validPlayers.push(p);
+    }
+
+    if (validPlayers.length === 0) {
+      this.logger.warn(`No valid players remaining to start match in ${gameModeId}`);
+      return;
+    }
+
+    // Oyun modu kapasite kontrolü ve eksik kalanların botlarla tamamlanması (ör. classic_10: 10 oyuncu)
+    const mode = await this.prisma.gameMode.findUnique({
+      where: { name: gameModeId },
+    });
+    const targetCapacity = mode?.maxPlayers || (gameModeId.startsWith('classic_10') ? 10 : 2);
+    
+    if (validPlayers.length < targetCapacity) {
+      const needed = targetCapacity - validPlayers.length;
+      if (needed > 0) {
+        const botIds = await this.botService.getAvailableBots(needed, validPlayers);
+        for (const b of botIds) {
+          await this.redisService.set(`player_room:${b}`, roomId, 3600);
+          validPlayers.push(b);
+        }
+      }
+    }
+
+    this.logger.log(`Match found! Room: ${roomId}, Players: ${validPlayers.join(', ')}`);
 
     // Eşleşen oyuncuların kuyruk durumunu temizle
-    for (const p of players) {
+    for (const p of validPlayers) {
       await this.redisService.del(`player_queue:${p}`);
       await this.redisService.del(`player_queue_time:${p}`);
     }
 
     // Odayı Redis'te başlat
-    await this.initializeRoom(roomId, players, gameModeId);
+    try {
+      await this.initializeRoom(roomId, validPlayers, gameModeId);
+    } catch (initErr) {
+      this.logger.error(`Failed to initialize room ${roomId}: ${(initErr as Error).message}`);
+      for (const p of validPlayers) {
+        const cur = await this.redisService.get(`player_room:${p}`);
+        if (cur === roomId) {
+          await this.redisService.del(`player_room:${p}`);
+        }
+      }
+      throw initErr;
+    }
     
     // Oyunculara haber ver
-    this.gamesService.notifyPlayersMatchFound(roomId, players);
+    this.gamesService.notifyPlayersMatchFound(roomId, validPlayers);
 
     // Oyunu başlat
     this.gamesService.startGameCountdown(roomId);
   }
 
   async leaveQueue(userId: string, gameModeId: string): Promise<boolean> {
-    const queuedMode = await this.redisService.get(`player_queue:${userId}`);
-    // Eğer oyuncu bu kuyrukta değilse veya zaten çıkmışsa çift iade yapma
-    if (queuedMode !== gameModeId) {
-      this.logger.warn(`User ${userId} is not registered in queue ${gameModeId}, skipping refund`);
+    // Çoklu çağrı ve eşzamanlı disconnect koruması için kilit
+    const lockKey = `player_leave_lock:${userId}`;
+    const acquired = await this.redisService.setNX(lockKey, '1', 5);
+    if (!acquired) {
+      this.logger.warn(`User ${userId} leave queue operation already in progress, skipping`);
       return false;
     }
 
-    const queueName = `matchmaking_queue:${gameModeId}`;
-    await this.redisService.removeFromQueue(queueName, userId);
-    await this.redisService.del(`player_queue:${userId}`);
-    await this.redisService.del(`player_queue_time:${userId}`);
-    
-    // Açık hold ID kaydı varsa spesifik olarak o hold'u iade et
-    const holdId = await this.redisService.get(`player_hold:${userId}`);
-    if (holdId) {
-      await this.redisService.del(`player_hold:${userId}`);
-      await this.walletService.refundHoldRecord(holdId);
-      this.logger.log(`User ${userId} left queue ${queueName} (Direct Hold Refund: ${holdId})`);
-    } else {
-      // GameMode ücretini iade et (fallback)
-      const mode = await this.prisma.gameMode.findUnique({
-        where: { name: gameModeId },
-      });
-      const entryFee = mode?.entryFee || 0;
-      await this.walletService.releaseHold(userId, entryFee);
-      this.logger.log(`User ${userId} left queue ${queueName} (Refund: ${entryFee})`);
+    try {
+      const queuedMode = await this.redisService.get(`player_queue:${userId}`);
+      // Eğer oyuncu bu kuyrukta değilse veya zaten çıkmışsa çift iade yapma
+      if (queuedMode !== gameModeId) {
+        this.logger.warn(`User ${userId} is not registered in queue ${gameModeId}, skipping refund`);
+        return false;
+      }
+
+      const queueName = `matchmaking_queue:${gameModeId}`;
+      await this.redisService.removeFromQueue(queueName, userId);
+      await this.redisService.del(`player_queue:${userId}`);
+      await this.redisService.del(`player_queue_time:${userId}`);
+      
+      // Açık hold ID kaydı varsa spesifik olarak o hold'u iade et
+      const holdId = await this.redisService.get(`player_hold:${userId}`);
+      if (holdId) {
+        await this.redisService.del(`player_hold:${userId}`);
+        await this.walletService.refundHoldRecord(holdId);
+        this.logger.log(`User ${userId} left queue ${queueName} (Direct Hold Refund: ${holdId})`);
+      } else {
+        // GameMode ücretini iade et (fallback)
+        const mode = await this.prisma.gameMode.findUnique({
+          where: { name: gameModeId },
+        });
+        const entryFee = mode?.entryFee || 0;
+        await this.walletService.releaseHold(userId, entryFee);
+        this.logger.log(`User ${userId} left queue ${queueName} (Refund: ${entryFee})`);
+      }
+      return true;
+    } finally {
+      await this.redisService.del(lockKey);
     }
-    return true;
   }
 
   /**
@@ -282,6 +357,10 @@ export class MatchmakingService implements OnModuleInit, OnModuleDestroy {
 
   async getPlayerRoom(userId: string): Promise<string | null> {
     return this.redisService.get(`player_room:${userId}`);
+  }
+
+  async getRoomState(roomId: string): Promise<string | null> {
+    return this.redisService.get(`room:${roomId}`);
   }
 
   private async initializeRoom(roomId: string, players: string[], gameModeId: string): Promise<void> {
@@ -350,6 +429,7 @@ export class MatchmakingService implements OnModuleInit, OnModuleDestroy {
     const roomState = {
       roomId,
       gameModeName: gameModeId,
+      maxPlayers: mode.maxPlayers || (gameModeId.startsWith('classic_10') ? 10 : 2),
       entryFee: effectiveEntryFee,
       isPvE: hasBots,
       status: 'PLAYER_READY',

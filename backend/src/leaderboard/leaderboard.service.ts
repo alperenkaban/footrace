@@ -14,10 +14,16 @@ export class LeaderboardService {
   async getGlobalLeaderboard(limit = 100, type: 'rating' | 'wins' = 'rating') {
     const sortType = type === 'wins' ? 'wins' : 'rating';
     const cacheKey = `leaderboard:global:${sortType}:top_${limit}`;
-    const cached = await this.redisService.get(cacheKey);
 
-    if (cached) {
-      return JSON.parse(cached);
+    try {
+      if (this.redisService) {
+        const cached = await this.redisService.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
+      }
+    } catch (cacheErr) {
+      this.logger.warn(`Redis cache read error for leaderboard: ${(cacheErr as Error).message}`);
     }
 
     // Top players by rating or wins (BOTS EXCLUDED from competitive leaderboard)
@@ -50,14 +56,20 @@ export class LeaderboardService {
     const leaderboard = topPlayers.map((p, index) => ({
       rank: index + 1,
       userId: p.userId,
-      name: p.user.email ? p.user.email.split('@')[0] : `Guest_${p.userId.substring(0, 5)}`,
-      isBot: p.user.isBot,
+      name: p.user?.email ? p.user.email.split('@')[0] : `Guest_${p.userId.substring(0, 5)}`,
+      isBot: Boolean(p.user?.isBot),
       rating: p.rating,
       wins: p.wins,
     }));
 
     // Cache in Redis for 30 seconds
-    await this.redisService.set(cacheKey, JSON.stringify(leaderboard), 30);
+    try {
+      if (this.redisService) {
+        await this.redisService.set(cacheKey, JSON.stringify(leaderboard), 30);
+      }
+    } catch (cacheErr) {
+      this.logger.warn(`Redis cache write error for leaderboard: ${(cacheErr as Error).message}`);
+    }
 
     return leaderboard;
   }

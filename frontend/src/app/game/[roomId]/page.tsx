@@ -35,6 +35,9 @@ export default function GamePage() {
   // Estimation State
   const [estimationAnswer, setEstimationAnswer] = useState<string>('');
   
+  // Player Guess State
+  const [playerGuessAnswer, setPlayerGuessAnswer] = useState<string>('');
+  
   // Ranking State
   const [rankingPool, setRankingPool] = useState<string[]>([]);
   const [rankingAnswer, setRankingAnswer] = useState<string[]>([]);
@@ -88,6 +91,7 @@ export default function GamePage() {
       setResult(null);
       setIsAnswered(false);
       setEstimationAnswer('');
+      setPlayerGuessAnswer('');
       
       if (data.type === 'RANKING' && data.metadata?.items) {
         setRankingPool([...data.metadata.items]);
@@ -298,6 +302,191 @@ export default function GamePage() {
             >
               Sıralamayı Gönder
             </button>
+          )}
+        </div>
+      );
+    }
+
+    if (question.type === 'PLAYER_GUESS') {
+      const clues = question.metadata?.clues;
+      const options = question.metadata?.options;
+
+      return (
+        <div className="mt-6 flex flex-col gap-4">
+          <div className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-bold uppercase tracking-wider mx-auto">
+            <span>⚽</span> Futbolcuyu Bul (+1000 Puan)
+          </div>
+
+          {clues && Array.isArray(clues) && clues.length > 0 && (
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-1.5">
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">İpuçları:</span>
+              {clues.map((clue: string, i: number) => (
+                <p key={i} className="text-xs text-cyan-200">💡 {clue}</p>
+              ))}
+            </div>
+          )}
+
+          {options && Array.isArray(options) && options.length > 0 ? (
+            <div className="grid grid-cols-1 gap-3">
+              {options.map((option: string) => {
+                let btnColor = "bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200";
+                if (question.correctAnswer) {
+                  if (option === question.correctAnswer) {
+                    btnColor = "bg-emerald-500 border-emerald-400 text-white";
+                  } else if (result && result.givenAnswer === option && !result.isCorrect) {
+                    btnColor = "bg-red-500/40 border-red-400 text-white";
+                  }
+                }
+                return (
+                  <button
+                    key={option}
+                    onClick={() => !isAnswered && submitAnswer(option)}
+                    disabled={isAnswered}
+                    className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all ${btnColor} disabled:cursor-not-allowed`}
+                  >
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-4">
+              <input
+                type="text"
+                value={playerGuessAnswer}
+                onChange={(e) => setPlayerGuessAnswer(e.target.value)}
+                placeholder="Futbolcunun adını yazın..."
+                disabled={isAnswered}
+                className="w-full max-w-sm bg-white/10 border border-white/20 rounded-xl py-3 px-4 text-white text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-60"
+              />
+              <button
+                onClick={() => submitAnswer(playerGuessAnswer.trim())}
+                disabled={isAnswered || !playerGuessAnswer.trim()}
+                className="w-full max-w-sm py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isAnswered ? 'Cevap Gönderildi' : 'Tahmin Et'}
+              </button>
+            </div>
+          )}
+
+          {question.correctAnswer !== undefined && (
+            <p className="text-emerald-400 font-bold text-lg text-center">Doğru Cevap: {question.correctAnswer}</p>
+          )}
+        </div>
+      );
+    }
+
+    if (question.type === 'HARD_QUESTION') {
+      const options = question.metadata?.options;
+      return (
+        <div className="mt-6 flex flex-col gap-4">
+          <div className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-wider mx-auto">
+            <span>🔥</span> Zor Soru (+1500 Puan)
+          </div>
+
+          {options && Array.isArray(options) && options.length > 0 ? (
+            <div className="grid grid-cols-1 gap-3">
+              {options.map((option: string) => {
+                let btnColor = "bg-white/5 hover:bg-white/10 border border-amber-500/20 text-gray-200";
+                if (question.correctAnswer) {
+                  if (option === question.correctAnswer) {
+                    btnColor = "bg-amber-500 border-amber-400 text-white";
+                  } else if (result && result.givenAnswer === option && !result.isCorrect) {
+                    btnColor = "bg-red-500/40 border-red-400 text-white";
+                  }
+                }
+                return (
+                  <button
+                    key={option}
+                    onClick={() => !isAnswered && submitAnswer(option)}
+                    disabled={isAnswered}
+                    className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all ${btnColor} disabled:cursor-not-allowed`}
+                  >
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-4">
+              <input
+                type="text"
+                value={playerGuessAnswer}
+                onChange={(e) => setPlayerGuessAnswer(e.target.value)}
+                placeholder="Cevabınızı yazın..."
+                disabled={isAnswered}
+                className="w-full max-w-sm bg-white/10 border border-white/20 rounded-xl py-3 px-4 text-white text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-60"
+              />
+              <button
+                onClick={() => submitAnswer(playerGuessAnswer.trim())}
+                disabled={isAnswered || !playerGuessAnswer.trim()}
+                className="w-full max-w-sm py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isAnswered ? 'Cevap Gönderildi' : 'Cevabı Gönder'}
+              </button>
+            </div>
+          )}
+
+          {question.correctAnswer !== undefined && (
+            <p className="text-amber-400 font-bold text-lg text-center">Doğru Cevap: {question.correctAnswer}</p>
+          )}
+        </div>
+      );
+    }
+
+    if (question.type === 'FINAL') {
+      const options = question.metadata?.options;
+      return (
+        <div className="mt-6 flex flex-col gap-4">
+          <div className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-amber-500/20 border border-pink-500/40 text-pink-300 text-xs font-black uppercase tracking-wider mx-auto">
+            <span>👑</span> Büyük Final Sorusu (+2000 Puan)
+          </div>
+
+          {options && Array.isArray(options) && options.length > 0 ? (
+            <div className="grid grid-cols-1 gap-3">
+              {options.map((option: string) => {
+                let btnColor = "bg-white/5 hover:bg-white/10 border border-pink-500/20 text-gray-200";
+                if (question.correctAnswer) {
+                  if (option === question.correctAnswer) {
+                    btnColor = "bg-gradient-to-r from-pink-500 to-purple-600 border-pink-400 text-white font-black";
+                  } else if (result && result.givenAnswer === option && !result.isCorrect) {
+                    btnColor = "bg-red-500/40 border-red-400 text-white";
+                  }
+                }
+                return (
+                  <button
+                    key={option}
+                    onClick={() => !isAnswered && submitAnswer(option)}
+                    disabled={isAnswered}
+                    className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all ${btnColor} disabled:cursor-not-allowed`}
+                  >
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-4">
+              <input
+                type="text"
+                value={playerGuessAnswer}
+                onChange={(e) => setPlayerGuessAnswer(e.target.value)}
+                placeholder="Final cevabınızı yazın..."
+                disabled={isAnswered}
+                className="w-full max-w-sm bg-white/10 border border-white/20 rounded-xl py-3 px-4 text-white text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-pink-500 disabled:opacity-60"
+              />
+              <button
+                onClick={() => submitAnswer(playerGuessAnswer.trim())}
+                disabled={isAnswered || !playerGuessAnswer.trim()}
+                className="w-full max-w-sm py-3 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isAnswered ? 'Cevap Gönderildi' : 'Final Cevabını Gönder'}
+              </button>
+            </div>
+          )}
+
+          {question.correctAnswer !== undefined && (
+            <p className="text-pink-400 font-bold text-lg text-center">Doğru Cevap: {question.correctAnswer}</p>
           )}
         </div>
       );

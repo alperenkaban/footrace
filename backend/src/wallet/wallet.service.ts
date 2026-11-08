@@ -98,6 +98,20 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
             }
           }
 
+          // Aynı maç için mükerrer hold kontrolü (İdempotency)
+          if (options?.matchId) {
+            const existingHold = await tx.matchHold.findFirst({
+              where: { userId, matchId: options.matchId },
+            });
+            if (existingHold) {
+              if (existingHold.status === 'HELD') {
+                this.logger.warn(`User ${userId} already has an active hold ${existingHold.id} for match ${options.matchId}, returning existing hold`);
+                return { holdId: existingHold.id };
+              }
+              throw new BadRequestException('Bu maç için hold zaten işlenmiş veya kapatılmış');
+            }
+          }
+
           const profile = await tx.playerProfile.findUnique({
             where: { userId },
             select: { balance: true, heldBalance: true },
@@ -209,6 +223,12 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
     return this.withUserLock(userId, async () => {
       try {
         await this.prisma.$transaction(async (tx) => {
+          if (typeof (tx as any).$queryRaw === 'function') {
+            try {
+              await (tx as any).$queryRaw`SELECT balance, "heldBalance" FROM "PlayerProfile" WHERE "userId" = ${userId} FOR UPDATE`;
+            } catch {}
+          }
+
           const profile = await tx.playerProfile.findUnique({
             where: { userId },
             select: { balance: true, heldBalance: true },
@@ -227,6 +247,12 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
           if (!hold) {
             this.logger.warn(`User ${userId} has no unattached HELD record to release`);
             throw new BadRequestException('Serbest bırakılacak aktif kuyruk hold kaydı bulunamadı');
+          }
+
+          if (typeof (tx as any).$queryRaw === 'function') {
+            try {
+              await (tx as any).$queryRaw`SELECT id, status FROM "MatchHold" WHERE id = ${hold.id} FOR UPDATE`;
+            } catch {}
           }
 
           await tx.matchHold.update({
@@ -257,12 +283,24 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
   async refundMatchHolds(matchId: string): Promise<{ refundedCount: number }> {
     return this.withMatchLock(matchId, async () => {
       return await this.prisma.$transaction(async (tx) => {
+        if (typeof (tx as any).$queryRaw === 'function') {
+          try {
+            await (tx as any).$queryRaw`SELECT id FROM "MatchHold" WHERE "matchId" = ${matchId} AND status = 'HELD' FOR UPDATE`;
+          } catch {}
+        }
+
         const activeHolds = await tx.matchHold.findMany({
           where: { matchId, status: 'HELD' },
         });
 
         let refundedCount = 0;
         for (const hold of activeHolds) {
+          if (typeof (tx as any).$queryRaw === 'function') {
+            try {
+              await (tx as any).$queryRaw`SELECT balance, "heldBalance" FROM "PlayerProfile" WHERE "userId" = ${hold.userId} FOR UPDATE`;
+            } catch {}
+          }
+
           await tx.matchHold.update({
             where: { id: hold.id },
             data: { status: 'REFUNDED', refundedAt: new Date() },
@@ -277,16 +315,35 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
           });
 
           // Ledger iade kaydı ekle (@@unique([userId, type, referenceId]) ile korunur)
-          await tx.coinTransaction.create({
-            data: {
-              userId: hold.userId,
-              amount: hold.amount,
-              type: 'MATCH_REFUND',
-              referenceId: matchId,
-              balanceBefore: p.balance - hold.amount,
-              balanceAfter: p.balance,
-            },
-          });
+          let existingRefundTx = null;
+          if (typeof tx.coinTransaction?.findUnique === 'function') {
+            existingRefundTx = await tx.coinTransaction.findUnique({
+              where: {
+                userId_type_referenceId: {
+                  userId: hold.userId,
+                  type: 'MATCH_REFUND',
+                  referenceId: matchId,
+                },
+              },
+            });
+          }
+
+          if (!existingRefundTx) {
+            try {
+              await tx.coinTransaction.create({
+                data: {
+                  userId: hold.userId,
+                  amount: hold.amount,
+                  type: 'MATCH_REFUND',
+                  referenceId: matchId,
+                  balanceBefore: p.balance - hold.amount,
+                  balanceAfter: p.balance,
+                },
+              });
+            } catch (txErr) {
+              this.logger.warn(`CoinTransaction duplicate in refundMatchHolds: ${(txErr as Error).message}`);
+            }
+          }
           refundedCount++;
         }
 
@@ -312,12 +369,24 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
     return this.withUserLock(hold.userId, async () => {
       try {
         return await this.prisma.$transaction(async (tx) => {
+          if (typeof (tx as any).$queryRaw === 'function') {
+            try {
+              await (tx as any).$queryRaw`SELECT id, status, amount, "userId" FROM "MatchHold" WHERE id = ${holdId} FOR UPDATE`;
+            } catch {}
+          }
+
           const freshHold = await tx.matchHold.findUnique({
             where: { id: holdId },
           });
 
           if (!freshHold || freshHold.status !== 'HELD') {
             return false;
+          }
+
+          if (typeof (tx as any).$queryRaw === 'function') {
+            try {
+              await (tx as any).$queryRaw`SELECT balance, "heldBalance" FROM "PlayerProfile" WHERE "userId" = ${freshHold.userId} FOR UPDATE`;
+            } catch {}
           }
 
           const profile = await tx.playerProfile.findUnique({
@@ -345,19 +414,35 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
             },
           });
 
-          try {
-            await tx.coinTransaction.create({
-              data: {
-                userId: freshHold.userId,
-                amount: freshHold.amount,
-                type: 'MATCH_REFUND',
-                referenceId: freshHold.matchId || freshHold.id,
-                balanceBefore: updatedProfile.balance - freshHold.amount,
-                balanceAfter: updatedProfile.balance,
+          const refId = freshHold.matchId || freshHold.id;
+          let existingRefundTx = null;
+          if (typeof tx.coinTransaction?.findUnique === 'function') {
+            existingRefundTx = await tx.coinTransaction.findUnique({
+              where: {
+                userId_type_referenceId: {
+                  userId: freshHold.userId,
+                  type: 'MATCH_REFUND',
+                  referenceId: refId,
+                },
               },
             });
-          } catch (txErr) {
-            this.logger.warn(`CoinTransaction duplicate in refundHoldRecord: ${(txErr as Error).message}`);
+          }
+
+          if (!existingRefundTx) {
+            try {
+              await tx.coinTransaction.create({
+                data: {
+                  userId: freshHold.userId,
+                  amount: freshHold.amount,
+                  type: 'MATCH_REFUND',
+                  referenceId: refId,
+                  balanceBefore: updatedProfile.balance - freshHold.amount,
+                  balanceAfter: updatedProfile.balance,
+                },
+              });
+            } catch (txErr) {
+              this.logger.warn(`CoinTransaction duplicate in refundHoldRecord: ${(txErr as Error).message}`);
+            }
           }
 
           this.logger.log(`Safely refunded hold ${holdId} for user ${freshHold.userId}`);
@@ -382,6 +467,12 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
     return this.withUserLock(userId, async () => {
       try {
         return await this.prisma.$transaction(async (tx) => {
+          if (typeof (tx as any).$queryRaw === 'function') {
+            try {
+              await (tx as any).$queryRaw`SELECT balance, "heldBalance" FROM "PlayerProfile" WHERE "userId" = ${userId} FOR UPDATE`;
+            } catch {}
+          }
+
           const profile = await tx.playerProfile.findUnique({
             where: { userId },
             select: { balance: true, heldBalance: true },
@@ -408,6 +499,12 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
           }
 
           if (hold) {
+            if (typeof (tx as any).$queryRaw === 'function') {
+              try {
+                await (tx as any).$queryRaw`SELECT id, status FROM "MatchHold" WHERE id = ${hold.id} FOR UPDATE`;
+              } catch {}
+            }
+
             await tx.matchHold.update({
               where: { id: hold.id },
               data: { status: 'REFUNDED', refundedAt: new Date() },
@@ -424,19 +521,34 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
 
           // İade ledger kaydı oluştur
           const refId = matchId || hold?.id || 'manual-refund';
-          try {
-            await tx.coinTransaction.create({
-              data: {
-                userId,
-                amount,
-                type: 'MATCH_REFUND',
-                referenceId: refId,
-                balanceBefore: profile.balance,
-                balanceAfter: profile.balance + amount,
+          let existingRefundTx = null;
+          if (typeof tx.coinTransaction?.findUnique === 'function') {
+            existingRefundTx = await tx.coinTransaction.findUnique({
+              where: {
+                userId_type_referenceId: {
+                  userId,
+                  type: 'MATCH_REFUND',
+                  referenceId: refId,
+                },
               },
             });
-          } catch (txErr) {
-            this.logger.warn(`CoinTransaction record skipped or duplicate: ${(txErr as Error).message}`);
+          }
+
+          if (!existingRefundTx) {
+            try {
+              await tx.coinTransaction.create({
+                data: {
+                  userId,
+                  amount,
+                  type: 'MATCH_REFUND',
+                  referenceId: refId,
+                  balanceBefore: profile.balance,
+                  balanceAfter: profile.balance + amount,
+                },
+              });
+            } catch (txErr) {
+              this.logger.warn(`CoinTransaction record skipped or duplicate: ${(txErr as Error).message}`);
+            }
           }
 
           this.logger.log(`Safely refunded ${amount} coins for user ${userId} (Match: ${matchId || 'N/A'})`);
@@ -494,10 +606,10 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
             select: { id: true },
           });
           const hasBots = botUsers.length > 0;
-          const isPractice = isPvE || hasBots || entryFee <= 0;
+          const isPractice = isPvE || hasBots || entryFee <= 0 || !winnerId;
 
           if (isPractice) {
-            // PvE / Antrenman Maçı Settlement: Kalan HELD kayıtlarını iade et
+            // PvE / Antrenman Maçı veya Kazanan Olmayan Beraberlik/İptal Settlement: Kalan HELD kayıtlarını iade et
             const remainingHolds = await tx.matchHold.findMany({
               where: { matchId, status: 'HELD' },
             });
@@ -536,7 +648,7 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
                 settledAt: new Date(),
               },
             });
-            this.logger.log(`Match ${matchId} settled as PvE/Practice (0 prize, 0 rating change). Winner: ${winnerId}`);
+            this.logger.log(`Match ${matchId} settled as PvE/Practice/Refund (0 prize, 0 rating change). Winner: ${winnerId || 'NONE'}`);
             return;
           }
 
@@ -553,6 +665,11 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
           const heldUserIds = new Set<string>();
           for (const h of matchHolds) {
             heldUserIds.add(h.userId);
+            if (typeof (tx as any).$queryRaw === 'function') {
+              try {
+                await (tx as any).$queryRaw`SELECT balance, "heldBalance" FROM "PlayerProfile" WHERE "userId" = ${h.userId} FOR UPDATE`;
+              } catch {}
+            }
             await tx.matchHold.update({
               where: { id: h.id },
               data: { status: 'SETTLED', settledAt: new Date() },
@@ -574,6 +691,12 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
           }
 
           // 2. Kazanana ödülü VER (Bakiye artır ve Rating'i 20 artır)
+          if (typeof (tx as any).$queryRaw === 'function') {
+            try {
+              await (tx as any).$queryRaw`SELECT balance, "heldBalance" FROM "PlayerProfile" WHERE "userId" = ${winnerId} FOR UPDATE`;
+            } catch {}
+          }
+
           const winnerProfile = await tx.playerProfile.update({
             where: { userId: winnerId },
             data: { 
@@ -874,6 +997,12 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
 
     return this.withUserLock(userId, async () => {
       return await this.prisma.$transaction(async (tx) => {
+        if (typeof (tx as any).$queryRaw === 'function') {
+          try {
+            await (tx as any).$queryRaw`SELECT balance, "heldBalance" FROM "PlayerProfile" WHERE "userId" = ${userId} FOR UPDATE`;
+          } catch {}
+        }
+
         const profile = await tx.playerProfile.findUnique({
           where: { userId },
           select: { balance: true, heldBalance: true },
@@ -881,6 +1010,24 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
 
         if (!profile) {
           throw new BadRequestException('Kullanıcı profili bulunamadı');
+        }
+
+        let existingTx = null;
+        if (typeof tx.coinTransaction?.findUnique === 'function') {
+          existingTx = await tx.coinTransaction.findUnique({
+            where: {
+              userId_type_referenceId: {
+                userId,
+                type,
+                referenceId,
+              },
+            },
+          });
+        }
+
+        if (existingTx) {
+          this.logger.warn(`CreditCoins duplicate skipped for user ${userId}, ref: ${referenceId}`);
+          return { balance: profile.balance, heldBalance: profile.heldBalance };
         }
 
         const updated = await tx.playerProfile.update({

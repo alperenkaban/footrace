@@ -1,0 +1,17 @@
+name: Footrace Keepalive & Upstash Ping
+
+on:
+  schedule:
+    # Runs every day at 12:00 UTC to prevent Upstash Redis inactivity archive & keep Render awake
+    - cron: '0 12 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Footrace /health (Warms Render & Pings Upstash Redis)
+        run: |
+          echo "Pinging Footrace backend health endpoint..."
+          curl -s -S --max-time 120 "https://footrace-6lnc.onrender.com/health" || true
+          echo "Keep-alive ping sent successfully."

@@ -2,6 +2,13 @@ import { Controller, Get, Post, Body, Req, UseGuards, UnauthorizedException } fr
 import { ShopService } from './shop.service.js';
 import { AuthGuard } from '@nestjs/passport';
 import { JwtService } from '@nestjs/jwt';
+import {
+  BuyPackageDto,
+  ClaimAdRewardDto,
+  VerifyGooglePlayDto,
+  VerifyAppleAppStoreDto,
+  RestorePurchasesDto,
+} from './dto/shop.dto.js';
 
 @Controller('shop')
 export class ShopController {
@@ -21,15 +28,14 @@ export class ShopController {
   @Post('buy')
   async buyPackage(
     @Req() req: any,
-    @Body('packageId') packageId: string,
-    @Body('userId') bodyUserId?: string,
+    @Body() dto: BuyPackageDto,
   ) {
-    const userId = this.extractUserId(req, bodyUserId);
+    const userId = this.extractUserId(req, dto.userId);
     if (!userId) {
       throw new UnauthorizedException('Kullanıcı girişi yapılmamış');
     }
 
-    const result = await this.shopService.buyPackage(userId, packageId);
+    const result = await this.shopService.buyPackage(userId, dto.packageId);
     return {
       success: true,
       data: result,
@@ -39,9 +45,9 @@ export class ShopController {
   @Post('claim-ad-reward')
   async claimAdReward(
     @Req() req: any,
-    @Body('userId') bodyUserId?: string,
+    @Body() dto: ClaimAdRewardDto,
   ) {
-    const userId = this.extractUserId(req, bodyUserId);
+    const userId = this.extractUserId(req, dto.userId);
     if (!userId) {
       throw new UnauthorizedException('Kullanıcı girişi yapılmamış');
     }
@@ -77,20 +83,17 @@ export class ShopController {
   @Post('iap/google/verify')
   async verifyGooglePlay(
     @Req() req: any,
-    @Body('productId') productId: string,
-    @Body('purchaseToken') purchaseToken: string,
-    @Body('orderId') orderId?: string,
-    @Body('userId') bodyUserId?: string,
+    @Body() dto: VerifyGooglePlayDto,
   ) {
-    const userId = this.extractUserId(req, bodyUserId);
+    const userId = this.extractUserId(req, dto.userId);
     if (!userId) {
       throw new UnauthorizedException('Kullanıcı girişi yapılmamış');
     }
 
     const result = await this.shopService.verifyGooglePlayPurchase(userId, {
-      productId,
-      purchaseToken,
-      orderId,
+      productId: dto.productId,
+      purchaseToken: dto.purchaseToken,
+      orderId: dto.orderId,
     });
 
     return {
@@ -102,20 +105,17 @@ export class ShopController {
   @Post('iap/apple/verify')
   async verifyAppleAppStore(
     @Req() req: any,
-    @Body('productId') productId: string,
-    @Body('transactionId') transactionId: string,
-    @Body('receiptData') receiptData?: string,
-    @Body('userId') bodyUserId?: string,
+    @Body() dto: VerifyAppleAppStoreDto,
   ) {
-    const userId = this.extractUserId(req, bodyUserId);
+    const userId = this.extractUserId(req, dto.userId);
     if (!userId) {
       throw new UnauthorizedException('Kullanıcı girişi yapılmamış');
     }
 
     const result = await this.shopService.verifyAppleAppStorePurchase(userId, {
-      productId,
-      transactionId,
-      receiptData,
+      productId: dto.productId,
+      transactionId: dto.transactionId,
+      receiptData: dto.receiptData,
     });
 
     return {
@@ -125,8 +125,8 @@ export class ShopController {
   }
 
   @Post('iap/restore')
-  async restorePurchases(@Req() req: any, @Body('userId') bodyUserId?: string) {
-    const userId = this.extractUserId(req, bodyUserId);
+  async restorePurchases(@Req() req: any, @Body() dto: RestorePurchasesDto) {
+    const userId = this.extractUserId(req, dto.userId);
     if (!userId) {
       throw new UnauthorizedException('Kullanıcı girişi yapılmamış');
     }
