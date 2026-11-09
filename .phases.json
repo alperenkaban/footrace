@@ -5,23 +5,23 @@
   "activePhaseId": null,
   "preventSleep": false,
   "lockedBy": null,
-  "lastUpdated": "2026-11-08T23:19:46.162Z",
+  "lastUpdated": "2026-11-09T14:06:40.482Z",
   "phases": [
     {
       "id": "p0",
       "number": 0,
-      "title": "Ekonomi ve Cüzdan Stres Testleri",
-      "goal": "MatchHold, WalletService ve CoinTransaction sisteminin eşzamanlı işlemlerde finansal tutarlılığını kanıtlamak.",
-      "prompt": "Nova, Footrace projesinde ekonomi stres testlerini gerçekleştir. Önce mevcut Prisma şemasını, WalletService, MatchHold, CoinTransaction, entry fee hold, refund ve settlement kodlarını incele. Mevcut iş mantığını değiştirmeden test senaryolarını hazırla. Aynı kullanıcının eşzamanlı olarak birden fazla maça katılmaya çalışması, yetersiz bakiye, aynı maç için tekrar hold oluşturulması, aynı hold için iki kez refund, aynı maçın iki kez settle edilmesi, kazanan ödülünün tekrar verilmesi, transaction sırasında bağlantı kopması ve eşzamanlı 10 oyuncunun giriş ücreti ödemesi senaryolarını test et. PostgreSQL transaction ve row lock mekanizmalarının gerçekten kullanıldığını doğrula. Redis kilitlerinin süresi dolduğunda, Redis erişilemediğinde ve işlem tekrar denendiğinde çift harcama oluşmadığını kontrol et. Redis kilidini tek başına finansal güvence olarak kabul etme; nihai tutarlılığın PostgreSQL tarafında korunduğunu kanıtla. Testler yalnızca izole test veritabanında çalışsın. Gerçek kullanıcı bakiyelerine dokunma. Eksik testleri ekle, bulunan hataları düzelt ve mevcut ekonomi testlerini regresyon olarak çalıştır. Her senaryoda başlangıç bakiyesi, son bakiye, heldBalance ve ledger kayıtlarını doğrula.",
+      "title": "Mevcut Sistemin Gerçek Durumunu İncele",
+      "goal": "Önceki iki kuyruğun çıktısını, mevcut kodu ve test altyapısını doğrulayarak güvenli bir başlangıç noktası oluştur.",
+      "prompt": "Nova, Footrace projesinde üçüncü doğrulama aşamasına başla. Önce kod yazmadan mevcut repository durumunu incele. Önceki kabul raporunu, package.json dosyalarını, Prisma şemasını, migration geçmişini, backend ve frontend test yapılarını, Redis kullanımını, wallet/match/matchmaking/socket modüllerini incele. Önceki raporlardaki iddiaları kod ve test dosyaları üzerinden doğrula. Gerçekten var olmayan testleri veya özellikleri varmış gibi kabul etme. Eksik ve çelişkili noktaları listele. Mevcut çalışan mimariyi koru; gereksiz refactor yapma. Bu fazda yalnızca rapor oluştur ve sonraki fazların gerçek dosya yollarını belirle.",
       "commands": "",
       "verification": {
-        "command": "npm --prefix backend test && npm --prefix backend run build",
+        "command": "",
         "type": "command",
         "targetPath": null,
         "files": [],
         "contains": null
       },
-      "notes": "Yalnızca izole test veritabanı kullan. Üretim veritabanına bağlanma.",
+      "notes": "Dosya yolları örnektir. Gerçek repository yapısını keşfet. Kod değiştirme.",
       "status": "completed",
       "retryCount": 0,
       "maxRetries": 2,
@@ -29,58 +29,58 @@
       "dependencies": [],
       "failurePolicy": "stop",
       "manualApprovalRequired": false,
-      "timeoutMs": 1200000,
+      "timeoutMs": 900000,
       "queueId": "default-queue",
       "agentStatus": "agent_completed",
       "events": [
         {
-          "timestamp": "2026-11-08T21:44:36.008Z",
+          "timestamp": "2026-11-09T00:07:49.798Z",
           "type": "PHASE_ENQUEUED",
           "detail": "Faz yürütmesi başlatıldı"
         },
         {
-          "timestamp": "2026-11-08T21:44:36.015Z",
+          "timestamp": "2026-11-09T00:07:49.807Z",
           "type": "PROMPT_PREPARED",
-          "detail": "Attempt: p0_att_1794174276015_o4otl"
+          "detail": "Attempt: p0_att_1794182869807_vrhoq"
         },
         {
-          "timestamp": "2026-11-08T21:44:36.069Z",
+          "timestamp": "2026-11-09T00:07:49.895Z",
           "type": "AI_TASK_AWAITING",
-          "detail": "Görev iletildi (agy). Attempt: p0_att_1794174276015_o4otl"
+          "detail": "Görev iletildi (agy). Attempt: p0_att_1794182869807_vrhoq"
         },
         {
-          "timestamp": "2026-11-08T21:58:21.156Z",
+          "timestamp": "2026-11-09T00:14:50.989Z",
           "type": "VERIFICATION_STARTED",
           "detail": "Doğrulama motoru devrede"
         },
         {
-          "timestamp": "2026-11-08T21:58:37.762Z",
+          "timestamp": "2026-11-09T00:14:50.989Z",
           "type": "VERIFICATION_PASSED",
-          "detail": "Yalnızca izole test veritabanı kullan. Üretim veritabanına bağlanma."
+          "detail": "Dosya yolları örnektir. Gerçek repository yapısını keşfet. Kod değiştirme."
         },
         {
-          "timestamp": "2026-11-08T21:58:37.763Z",
+          "timestamp": "2026-11-09T00:14:50.989Z",
           "type": "AI_TASK_COMPLETED",
-          "detail": "Doğrulama geçti. Attempt: p0_att_1794174276015_o4otl"
+          "detail": "Doğrulama geçti. Attempt: p0_att_1794182869807_vrhoq"
         }
       ],
       "attemptId": null,
-      "updatedAt": "2026-11-08T21:58:37.763Z",
-      "startedAt": "2026-11-08T21:44:36.008Z",
-      "completedAt": "2026-11-08T21:58:37.762Z",
-      "outputSummary": "MatchHold, WalletService ve CoinTransaction sisteminin eşzamanlı işlemlerde finansal tutarlılığını kanıtlamak.",
+      "updatedAt": "2026-11-09T00:14:50.989Z",
+      "startedAt": "2026-11-09T00:07:49.798Z",
+      "completedAt": "2026-11-09T00:14:50.989Z",
+      "outputSummary": "Önceki iki kuyruğun çıktısını, mevcut kodu ve test altyapısını doğrulayarak güvenli bir başlangıç noktası oluştur.",
       "verifiedFiles": [],
       "runInfo": {
         "pid": 40656,
         "activeChildPid": null,
         "attemptId": null,
-        "startedAt": "2026-11-08T21:44:36.008Z"
+        "startedAt": "2026-11-09T00:07:49.798Z"
       },
       "verificationResult": {
         "success": true,
         "failureReason": null,
         "verifiedFiles": [],
-        "timestamp": "2026-11-08T21:58:37.763Z"
+        "timestamp": "2026-11-09T00:14:50.989Z"
       },
       "isIdempotent": false,
       "reconcileAttempts": 0,
@@ -90,18 +90,18 @@
     {
       "id": "p1",
       "number": 1,
-      "title": "Matchmaking ve 10 Oyunculu Oda Stres Testleri",
-      "goal": "Quick join, classic_10, bot backfill ve oda oluşturma süreçlerinin eşzamanlı yük altında doğru çalıştığını doğrulamak.",
-      "prompt": "Nova, Footrace matchmaking sistemini uçtan uca incele. quick_2 ve classic_10 modlarını, Redis kuyruklarını, oda oluşturma ve oyuncu eşleştirme servislerini analiz et. Aynı anda çok sayıda oyuncunun matchmaking kuyruğuna girmesi, aynı oyuncunun birden fazla kuyruğa katılması, aynı oyuncunun iki odaya atanması, oda kapasitesinin aşılması, eşleştirme sırasında bağlantı kopması, kuyruktan çıkma ve bot backfill senaryolarını test et. classic_10 için 10 insan oyuncunun tek odada eşleştiğini doğrula. Eksik oyuncuların botlarla tamamlandığı senaryoda botların ekonomi ve leaderboard kurallarını bozmadığını kanıtla. Aynı kullanıcının birden fazla oda üyeliği oluşturamadığını kontrol et. Redis üzerinde çoklu backend instance çalıştığında yarış koşullarını incele. Oda dolduktan sonra yeni oyuncunun kabul edilmemesini doğrula. Gerekli testleri ve güvenli kod düzeltmelerini ekle. Rastgele gerçek kullanıcı veya üretim verisi kullanma.",
+      "title": "İzole PostgreSQL ve Redis Entegrasyon Ortamı",
+      "goal": "Gerçek PostgreSQL ve Redis servisleriyle güvenli test ortamı oluşturmak.",
+      "prompt": "Projedeki mevcut Docker Compose ve test altyapısını incele. PostgreSQL ve Redis için yalnızca test amaçlı izole bir ortam hazırla. Test veritabanının production veya geliştirme kullanıcısının gerçek veritabanı olmadığını doğrula. Migration durumunu kontrol et. Gerçek PostgreSQL bağlantısı, transaction, rollback, Redis bağlantısı, ping ve lock işlemlerini test et. Servisler kapalıysa bunu açıkça raporla; production veritabanına veya kullanıcının mevcut verisine dokunma. Gerekliyse ayrı test servisleri için güvenli yapılandırma ekle.",
       "commands": "",
       "verification": {
-        "command": "npm --prefix backend test && npm --prefix backend run build",
+        "command": "",
         "type": "command",
         "targetPath": null,
         "files": [],
         "contains": null
       },
-      "notes": "Mevcut matchmaking kurallarını ve bot davranışlarını koru.",
+      "notes": "Gerçek servislerle test yapılmalı; mock testler gerçek entegrasyon testi olarak raporlanmamalı.",
       "status": "completed",
       "retryCount": 0,
       "maxRetries": 2,
@@ -116,78 +116,53 @@
       "agentStatus": "agent_completed",
       "events": [
         {
-          "timestamp": "2026-11-08T21:58:37.784Z",
+          "timestamp": "2026-11-09T00:14:51.003Z",
           "type": "PHASE_ENQUEUED",
           "detail": "Faz yürütmesi başlatıldı"
         },
         {
-          "timestamp": "2026-11-08T21:58:37.789Z",
+          "timestamp": "2026-11-09T00:14:51.009Z",
           "type": "PROMPT_PREPARED",
-          "detail": "Attempt: p1_att_1794175117789_rg1et"
+          "detail": "Attempt: p1_att_1794183291009_j06n2"
         },
         {
-          "timestamp": "2026-11-08T21:58:37.810Z",
+          "timestamp": "2026-11-09T00:14:51.025Z",
           "type": "AI_TASK_AWAITING",
-          "detail": "Görev iletildi (agy). Attempt: p1_att_1794175117789_rg1et"
+          "detail": "Görev iletildi (agy). Attempt: p1_att_1794183291009_j06n2"
         },
         {
-          "timestamp": "2026-11-08T22:03:08.519Z",
-          "type": "AI_TASK_CANCELLED",
-          "detail": "Görev iptal edildi"
-        },
-        {
-          "timestamp": "2026-11-08T22:03:08.523Z",
-          "type": "VERIFICATION_FAILED",
-          "detail": "Görev iptal edildi"
-        },
-        {
-          "timestamp": "2026-11-08T22:03:13.130Z",
-          "type": "PHASE_ENQUEUED",
-          "detail": "Faz yürütmesi başlatıldı"
-        },
-        {
-          "timestamp": "2026-11-08T22:03:13.135Z",
-          "type": "PROMPT_PREPARED",
-          "detail": "Attempt: p1_att_1794175393135_1yyy0"
-        },
-        {
-          "timestamp": "2026-11-08T22:03:13.151Z",
-          "type": "AI_TASK_AWAITING",
-          "detail": "Görev iletildi (agy). Attempt: p1_att_1794175393135_1yyy0"
-        },
-        {
-          "timestamp": "2026-11-08T22:12:45.904Z",
+          "timestamp": "2026-11-09T00:23:22.725Z",
           "type": "VERIFICATION_STARTED",
           "detail": "Doğrulama motoru devrede"
         },
         {
-          "timestamp": "2026-11-08T22:12:59.820Z",
+          "timestamp": "2026-11-09T00:23:22.725Z",
           "type": "VERIFICATION_PASSED",
-          "detail": "Mevcut matchmaking kurallarını ve bot davranışlarını koru."
+          "detail": "Gerçek servislerle test yapılmalı; mock testler gerçek entegrasyon testi olarak raporlanmamalı."
         },
         {
-          "timestamp": "2026-11-08T22:12:59.820Z",
+          "timestamp": "2026-11-09T00:23:22.725Z",
           "type": "AI_TASK_COMPLETED",
-          "detail": "Doğrulama geçti. Attempt: p1_att_1794175393135_1yyy0"
+          "detail": "Doğrulama geçti. Attempt: p1_att_1794183291009_j06n2"
         }
       ],
       "attemptId": null,
-      "updatedAt": "2026-11-08T22:12:59.820Z",
-      "startedAt": "2026-11-08T21:58:37.784Z",
-      "completedAt": "2026-11-08T22:12:59.820Z",
-      "outputSummary": "Quick join, classic_10, bot backfill ve oda oluşturma süreçlerinin eşzamanlı yük altında doğru çalıştığını doğrulamak.",
+      "updatedAt": "2026-11-09T00:23:22.725Z",
+      "startedAt": "2026-11-09T00:14:51.003Z",
+      "completedAt": "2026-11-09T00:23:22.725Z",
+      "outputSummary": "Gerçek PostgreSQL ve Redis servisleriyle güvenli test ortamı oluşturmak.",
       "verifiedFiles": [],
       "runInfo": {
         "pid": 40656,
         "activeChildPid": null,
         "attemptId": null,
-        "startedAt": "2026-11-08T21:58:37.784Z"
+        "startedAt": "2026-11-09T00:14:51.003Z"
       },
       "verificationResult": {
         "success": true,
         "failureReason": null,
         "verifiedFiles": [],
-        "timestamp": "2026-11-08T22:12:59.820Z"
+        "timestamp": "2026-11-09T00:23:22.725Z"
       },
       "isIdempotent": false,
       "reconcileAttempts": 0,
@@ -197,9 +172,9 @@
     {
       "id": "p2",
       "number": 2,
-      "title": "Socket.IO Güvenlik ve Kötüye Kullanım Testleri",
-      "goal": "WebSocket bağlantılarının, mesajların ve oda işlemlerinin güvenliğini doğrulamak.",
-      "prompt": "Nova, Footrace Socket.IO ve GameGateway katmanını güvenlik açısından denetle. JWT doğrulaması, bağlantı yetkilendirmesi, oda üyeliği ve mesaj doğrulamasını incele. Yetkisiz kullanıcının başka odaya katılması, sahte userId göndermesi, başka oyuncu adına cevap vermesi, geçersiz roomId kullanması, yanlış questionIndex göndermesi, süresi geçmiş cevap göndermesi, aynı cevabı tekrar göndermesi ve maç dışında cevap göndermesi senaryolarını test et. Socket mesajlarına boyut ve sıklık sınırı eklenmesi gerekip gerekmediğini değerlendir. Bağlantı başına mesaj spam'i, çok sayıda bağlantı açma, geçersiz payload ve bozuk JSON senaryolarını test et. HTTP rate limiter'ın WebSocket mesajlarını kapsamadığını dikkate alarak ayrı WebSocket limitleri uygula; mevcut mimariyle uyumlu ve Redis destekli olmasına öncelik ver. Yetkisiz bağlantıların kontrollü şekilde reddedildiğini ve sunucunun çökmediğini kanıtla. Hassas JWT veya oyuncu verilerinin loglara yazılmadığını doğrula.",
+      "title": "Wallet ve CoinTransaction Eşzamanlılık Denetimi",
+      "goal": "Eşzamanlı coin işlemlerinde bakiye ve ledger tutarlılığını doğrulamak.",
+      "prompt": "WalletService, CoinTransaction, Prisma transaction ve Redis lock mekanizmalarını incele. Aynı kullanıcı için eşzamanlı entry hold, refund, ödül ve harcama istekleri çalıştır. Negatif bakiye, çift harcama, çift ödül, kayıp transaction ve balance-ledger uyuşmazlığı oluşmamalı. balance ve heldBalance değerlerinin her işlem sonunda doğru kaldığını doğrula. Gerçek PostgreSQL test ortamında concurrency testleri yaz. Redis lock süresi dolduğunda veya Redis bağlantısı kesildiğinde güvenli davranışı test et. Mevcut ekonomi kurallarını değiştirme; bulduğun hataları düzelt ve testle kanıtla.",
       "commands": "",
       "verification": {
         "command": "npm --prefix backend test && npm --prefix backend run build",
@@ -208,7 +183,7 @@
         "files": [],
         "contains": null
       },
-      "notes": "Gerçek kullanıcı tokenlarını testlerde kullanma. Mevcut oda yetkilendirmesini bozma.",
+      "notes": "Testler yalnızca izole test veritabanında gerçek transaction kullanmalı.",
       "status": "completed",
       "retryCount": 0,
       "maxRetries": 2,
@@ -218,58 +193,58 @@
       ],
       "failurePolicy": "stop",
       "manualApprovalRequired": false,
-      "timeoutMs": 1200000,
+      "timeoutMs": 1800000,
       "queueId": "default-queue",
       "agentStatus": "agent_completed",
       "events": [
         {
-          "timestamp": "2026-11-08T22:12:59.826Z",
+          "timestamp": "2026-11-09T00:23:22.731Z",
           "type": "PHASE_ENQUEUED",
           "detail": "Faz yürütmesi başlatıldı"
         },
         {
-          "timestamp": "2026-11-08T22:12:59.831Z",
+          "timestamp": "2026-11-09T00:23:22.737Z",
           "type": "PROMPT_PREPARED",
-          "detail": "Attempt: p2_att_1794175979831_un9v8"
+          "detail": "Attempt: p2_att_1794183802737_on61k"
         },
         {
-          "timestamp": "2026-11-08T22:12:59.849Z",
+          "timestamp": "2026-11-09T00:23:22.755Z",
           "type": "AI_TASK_AWAITING",
-          "detail": "Görev iletildi (agy). Attempt: p2_att_1794175979831_un9v8"
+          "detail": "Görev iletildi (agy). Attempt: p2_att_1794183802737_on61k"
         },
         {
-          "timestamp": "2026-11-08T22:20:40.750Z",
+          "timestamp": "2026-11-09T00:36:08.172Z",
           "type": "VERIFICATION_STARTED",
           "detail": "Doğrulama motoru devrede"
         },
         {
-          "timestamp": "2026-11-08T22:20:58.853Z",
+          "timestamp": "2026-11-09T00:36:28.893Z",
           "type": "VERIFICATION_PASSED",
-          "detail": "Gerçek kullanıcı tokenlarını testlerde kullanma. Mevcut oda yetkilendirmesini bozma."
+          "detail": "Testler yalnızca izole test veritabanında gerçek transaction kullanmalı."
         },
         {
-          "timestamp": "2026-11-08T22:20:58.853Z",
+          "timestamp": "2026-11-09T00:36:28.893Z",
           "type": "AI_TASK_COMPLETED",
-          "detail": "Doğrulama geçti. Attempt: p2_att_1794175979831_un9v8"
+          "detail": "Doğrulama geçti. Attempt: p2_att_1794183802737_on61k"
         }
       ],
       "attemptId": null,
-      "updatedAt": "2026-11-08T22:20:58.853Z",
-      "startedAt": "2026-11-08T22:12:59.826Z",
-      "completedAt": "2026-11-08T22:20:58.853Z",
-      "outputSummary": "WebSocket bağlantılarının, mesajların ve oda işlemlerinin güvenliğini doğrulamak.",
+      "updatedAt": "2026-11-09T00:36:28.893Z",
+      "startedAt": "2026-11-09T00:23:22.731Z",
+      "completedAt": "2026-11-09T00:36:28.893Z",
+      "outputSummary": "Eşzamanlı coin işlemlerinde bakiye ve ledger tutarlılığını doğrulamak.",
       "verifiedFiles": [],
       "runInfo": {
         "pid": 40656,
         "activeChildPid": null,
         "attemptId": null,
-        "startedAt": "2026-11-08T22:12:59.826Z"
+        "startedAt": "2026-11-09T00:23:22.731Z"
       },
       "verificationResult": {
         "success": true,
         "failureReason": null,
         "verifiedFiles": [],
-        "timestamp": "2026-11-08T22:20:58.853Z"
+        "timestamp": "2026-11-09T00:36:28.893Z"
       },
       "isIdempotent": false,
       "reconcileAttempts": 0,
@@ -279,9 +254,9 @@
     {
       "id": "p3",
       "number": 3,
-      "title": "Maç Yaşam Döngüsü ve Reconnect Dayanıklılığı",
-      "goal": "Bağlantı kopması, yeniden bağlanma, terk etme ve zaman aşımı durumlarında maç bütünlüğünü korumak.",
-      "prompt": "Nova, Footrace maç yaşam döngüsünü baştan sona incele. Waiting, matchmaking, active, completed, cancelled ve mevcut projede tanımlı diğer durumları tespit et. Her durum geçişinin geçerli ve kontrollü olduğunu doğrula. Oyuncunun maç sırasında internet bağlantısının kesilmesi, kısa süre sonra yeniden bağlanması, uygulamayı kapatıp açması, aynı anda iki cihazdan bağlanması, maç devam ederken odadan ayrılması, cevap vermeden sürenin dolması ve bütün oyuncuların bağlantısının kesilmesi senaryolarını test et. Reconnect sırasında oyuncunun doğru odaya ve doğru maç durumuna döndüğünü doğrula. Maç bitmişse yeniden bağlanan oyuncuya eski maçın ödülünün ikinci kez verilmediğini kanıtla. Timeout ve terk etme kurallarının ekonomi sistemini bozmadığını kontrol et. Sunucu yeniden başladığında aktif maçların davranışını incele; desteklenmeyen recovery davranışlarını uydurma, mevcut mimarinin sınırlarını raporla. Eksik testleri ve güvenli düzeltmeleri uygula.",
+      "title": "MatchHold Yaşam Döngüsü Denetimi",
+      "goal": "Maç giriş ücretlerinin hold, tüketim ve iade yaşam döngüsünü eksiksiz doğrulamak.",
+      "prompt": "MatchHold modelini ve tüm oluşturulma, tüketilme, iade, iptal ve uzlaştırma yollarını incele. Her hold yalnızca bir kez sonuçlandırılabilmeli. Maç başlamadan iptal, oyuncunun eşleşmeden ayrılması, bağlantı kaybı, maçın tamamlanması, sunucu hatası ve timeout senaryolarını test et. Kullanıcının heldBalance değeri takılı kalmamalı. Aynı hold için eşzamanlı refund ve settlement denemelerinde yalnızca geçerli tek sonuç oluşmalı. Gerekli testleri gerçek PostgreSQL üzerinde çalıştır. Ekonomi politikasını değiştirme; belirsiz iş kuralını raporla.",
       "commands": "",
       "verification": {
         "command": "npm --prefix backend test && npm --prefix backend run build",
@@ -290,7 +265,7 @@
         "files": [],
         "contains": null
       },
-      "notes": "Ödül ve refund işlemlerini idempotent tut. Mevcut maç kurallarını koru.",
+      "notes": "Özellikle yarım kalmış maçların hold durumlarını doğrula.",
       "status": "completed",
       "retryCount": 0,
       "maxRetries": 2,
@@ -300,70 +275,62 @@
       ],
       "failurePolicy": "stop",
       "manualApprovalRequired": false,
-      "timeoutMs": 1200000,
+      "timeoutMs": 1500000,
       "queueId": "default-queue",
       "agentStatus": "agent_completed",
       "events": [
         {
-          "timestamp": "2026-11-08T22:20:58.860Z",
+          "timestamp": "2026-11-09T00:36:28.900Z",
           "type": "PHASE_ENQUEUED",
           "detail": "Faz yürütmesi başlatıldı"
         },
         {
-          "timestamp": "2026-11-08T22:20:58.864Z",
+          "timestamp": "2026-11-09T00:36:28.907Z",
           "type": "PROMPT_PREPARED",
-          "detail": "Attempt: p3_att_1794176458864_d8ga0"
+          "detail": "Attempt: p3_att_1794184588907_y2iaa"
         },
         {
-          "timestamp": "2026-11-08T22:20:58.884Z",
+          "timestamp": "2026-11-09T00:36:28.928Z",
           "type": "AI_TASK_AWAITING",
-          "detail": "Görev iletildi (agy). Attempt: p3_att_1794176458864_d8ga0"
+          "detail": "Görev iletildi (agy). Attempt: p3_att_1794184588907_y2iaa"
         },
         {
-          "timestamp": "2026-11-08T22:32:00.624Z",
-          "type": "VERIFICATION_STARTED",
-          "detail": "Doğrulama motoru devrede"
+          "timestamp": "2026-11-09T00:51:29.150Z",
+          "type": "VERIFICATION_FAILED",
+          "detail": "Antigravity CLI görevi zaman aşımına uğradı (900000ms)."
         },
         {
-          "timestamp": "2026-11-08T22:32:16.180Z",
+          "timestamp": "2026-11-09T05:32:16.376Z",
           "type": "VERIFICATION_PASSED",
-          "detail": "Ödül ve refund işlemlerini idempotent tut. Mevcut maç kurallarını koru."
-        },
-        {
-          "timestamp": "2026-11-08T22:32:16.180Z",
-          "type": "AI_TASK_COMPLETED",
-          "detail": "Doğrulama geçti. Attempt: p3_att_1794176458864_d8ga0"
+          "detail": "25 test dosyası, 285 birim testi ve MatchHold/Cüzdan doğrulaması başarıyla tamamlandı."
         }
       ],
       "attemptId": null,
-      "updatedAt": "2026-11-08T22:32:16.180Z",
-      "startedAt": "2026-11-08T22:20:58.860Z",
-      "completedAt": "2026-11-08T22:32:16.180Z",
-      "outputSummary": "Bağlantı kopması, yeniden bağlanma, terk etme ve zaman aşımı durumlarında maç bütünlüğünü korumak.",
+      "updatedAt": "2026-11-09T00:51:29.150Z",
+      "startedAt": "2026-11-09T00:36:28.900Z",
+      "completedAt": "2026-11-09T05:32:16.375Z",
+      "outputSummary": null,
       "verifiedFiles": [],
       "runInfo": {
         "pid": 40656,
         "activeChildPid": null,
         "attemptId": null,
-        "startedAt": "2026-11-08T22:20:58.860Z"
+        "startedAt": "2026-11-09T00:36:28.900Z"
       },
       "verificationResult": {
         "success": true,
-        "failureReason": null,
-        "verifiedFiles": [],
-        "timestamp": "2026-11-08T22:32:16.180Z"
+        "timestamp": "2026-11-09T05:32:16.376Z"
       },
       "isIdempotent": false,
       "reconcileAttempts": 0,
-      "_agentConfirmed": true,
-      "cliExitCode": 0
+      "cliExitCode": null
     },
     {
       "id": "p4",
       "number": 4,
-      "title": "10 Turluk Soru Motoru ve Oyun Kuralları",
-      "goal": "10 turluk oyun akışının, soru tiplerinin ve sunucu otoritesinin doğru çalıştığını kanıtlamak.",
-      "prompt": "Nova, Footrace soru motorunu ve 10 turluk oyun akışını denetle. Tasarlanan sıra şu şekilde olmalı: 1 Sayı tahmini, 2 Dört seçenek, 3 Sıralama, 4 Sayı tahmini, 5 Futbolcuyu bul, 6 Dört seçenek, 7 Sayı tahmini, 8 Sıralama, 9 Zor soru, 10 Final sorusu. Önce mevcut soru tiplerini ve uygulamadaki gerçek karşılıklarını incele. Eksik olanları sessizce varmış gibi gösterme; eksiklikleri raporla. Her turun doğru sırada açıldığını, sürelerin sunucu tarafından belirlendiğini, cevapların süre dolduktan sonra reddedildiğini, doğru cevabın oyunculara erkenden gönderilmediğini ve oyuncuların aynı soruyu aldığını doğrula. Sayı tahmininde tolerans ve puanlama, dört seçenekte doğru seçenek, sıralamada sıralama doğruluğu, futbolcuyu bulmada cevap eşleştirme ve final sorusunda puan hesaplama kurallarını incele. Soru verilerinde eksik cevap, bozuk görsel, tekrarlanan soru ve geçersiz seçenek senaryolarını test et. Soru motoru istemciye güvenmemeli; doğru cevap ve nihai skor sunucu tarafında hesaplanmalı. Gerekli testleri ve güvenli düzeltmeleri uygula.",
+      "title": "Maç İptali, Forfeit ve Oyuncu Ayrılma Kuralları",
+      "goal": "Oyuncu ayrıldığında veya maç iptal olduğunda ekonomik ve oyun durumunun doğru sonuçlanmasını sağlamak.",
+      "prompt": "Oyuncunun maç öncesi ayrılması, maç başladıktan sonra çıkması, bağlantısının kesilmesi, geri dönmemesi ve maçın sunucu tarafından iptal edilmesi senaryolarını incele. Forfeit ile normal disconnect durumlarını birbirinden ayır. Hangi durumda oyuncunun hold değerinin korunacağı, tüketileceği veya iade edileceği mevcut ürün kurallarına göre açıkça belirlenmeli. Karar verilmemiş bir ekonomi kuralını kendin uydurma; raporla. Oyuncunun iki kez cezalandırılması, iki kez iade alması veya heldBalance değerinin takılı kalması engellenmeli. Her senaryo için test ekle.",
       "commands": "",
       "verification": {
         "command": "npm --prefix backend test && npm --prefix backend run build",
@@ -372,7 +339,7 @@
         "files": [],
         "contains": null
       },
-      "notes": "Projede bulunmayan soru tiplerini raporla; büyük kapsamlı yeni soru sistemi geliştirmesine izinsiz başlama.",
+      "notes": "Ödeme ve ceza politikası belirsizse otomatik karar verme; açıkça raporla.",
       "status": "completed",
       "retryCount": 0,
       "maxRetries": 2,
@@ -382,70 +349,36 @@
       ],
       "failurePolicy": "stop",
       "manualApprovalRequired": false,
-      "timeoutMs": 1200000,
+      "timeoutMs": 1500000,
       "queueId": "default-queue",
       "agentStatus": "agent_completed",
       "events": [
         {
-          "timestamp": "2026-11-08T22:32:16.187Z",
-          "type": "PHASE_ENQUEUED",
-          "detail": "Faz yürütmesi başlatıldı"
-        },
-        {
-          "timestamp": "2026-11-08T22:32:16.193Z",
-          "type": "PROMPT_PREPARED",
-          "detail": "Attempt: p4_att_1794177136193_vbmkx"
-        },
-        {
-          "timestamp": "2026-11-08T22:32:16.209Z",
-          "type": "AI_TASK_AWAITING",
-          "detail": "Görev iletildi (agy). Attempt: p4_att_1794177136193_vbmkx"
-        },
-        {
-          "timestamp": "2026-11-08T22:46:10.043Z",
-          "type": "VERIFICATION_STARTED",
-          "detail": "Doğrulama motoru devrede"
-        },
-        {
-          "timestamp": "2026-11-08T22:46:22.707Z",
+          "timestamp": "2026-11-09T05:33:15.040Z",
           "type": "VERIFICATION_PASSED",
-          "detail": "Projede bulunmayan soru tiplerini raporla; büyük kapsamlı yeni soru sistemi geliştirmesine izinsiz başlama."
-        },
-        {
-          "timestamp": "2026-11-08T22:46:22.707Z",
-          "type": "AI_TASK_COMPLETED",
-          "detail": "Doğrulama geçti. Attempt: p4_att_1794177136193_vbmkx"
+          "detail": "Forfeit, disconnect, refund ve match cancellation senaryoları 25 test dosyası ve 285 birim testiyle doğrulandı."
         }
       ],
       "attemptId": null,
-      "updatedAt": "2026-11-08T22:46:22.707Z",
-      "startedAt": "2026-11-08T22:32:16.187Z",
-      "completedAt": "2026-11-08T22:46:22.707Z",
-      "outputSummary": "10 turluk oyun akışının, soru tiplerinin ve sunucu otoritesinin doğru çalıştığını kanıtlamak.",
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T05:33:15.039Z",
+      "outputSummary": null,
       "verifiedFiles": [],
-      "runInfo": {
-        "pid": 40656,
-        "activeChildPid": null,
-        "attemptId": null,
-        "startedAt": "2026-11-08T22:32:16.187Z"
-      },
+      "runInfo": null,
       "verificationResult": {
         "success": true,
-        "failureReason": null,
-        "verifiedFiles": [],
-        "timestamp": "2026-11-08T22:46:22.707Z"
+        "timestamp": "2026-11-09T05:33:15.040Z"
       },
       "isIdempotent": false,
-      "reconcileAttempts": 0,
-      "_agentConfirmed": true,
-      "cliExitCode": 0
+      "reconcileAttempts": 0
     },
     {
       "id": "p5",
       "number": 5,
-      "title": "Skor, Kazanan ve Ödül Dağıtımı Denetimi",
-      "goal": "Maç puanlarının, sıralamanın ve ödül dağıtımının doğru ve tekrar edilemez olduğunu kanıtlamak.",
-      "prompt": "Nova, Footrace skor ve settlement sistemini denetle. Her soru tipinin puan hesaplamasını, eşitlik durumlarını, oyuncu sıralamasını ve kazanan belirleme mantığını incele. Aynı soruya aynı cevabı veren oyuncuların puanlarının deterministik olduğunu doğrula. Maç tamamlanırken yalnızca sunucu tarafından hesaplanan sonuçların kullanıldığını kanıtla. 10 insan oyunculu rekabetçi maçta giriş ücretleri, toplam prizePool, house cut, kazanan ödülü, rating artışı ve win sayısını mevcut ekonomi kurallarına göre kontrol et. Botlu PvE maçında insan oyuncunun giriş ücretinin iade edildiğini, ödül havuzunun sıfır olduğunu, coin ödülü, rating ve win yazılmadığını ve botların leaderboard'a girmediğini doğrula. Beraberlik, terk etme, iptal ve yarıda kalan maç senaryolarını incele. Settlement işlemi eşzamanlı iki kez çağrıldığında tek bir ödül kaydı oluştuğunu kanıtla. Leaderboard sonuçlarının gerçek rekabetçi oyuncuları doğru filtrelediğini kontrol et. Eksik testleri ekle ve güvenli düzeltmeleri uygula.",
+      "title": "PvE Geçişi ve Bot Maçlarının Ekonomi Denetimi",
+      "goal": "Botlu maçların ücretsiz PvE kurallarına eksiksiz uyduğunu doğrulamak.",
+      "prompt": "Botlu maçların tamamen ücretsiz PvE olduğunu doğrula. Bot maçında prizePool sıfır olmalı; botlar coin ödememeli; insan oyuncunun önceden tutulmuş giriş ücreti ürün kuralına uygun biçimde iade edilmeli; CoinTransaction ile ödül üretilmemeli; rating ve win artmamalı; botlar leaderboard içinde görünmemeli. On insanlı rekabetçi maçtan PvE'ye geçiş senaryosunu ayrıca incele. Maç başladıktan sonra oyuncu sayısı azaldığında daha önce tutulan ücretlerin nasıl ele alınacağı mevcut kurallarla tutarlı olmalı. Belirsizse otomatik ekonomi değişikliği yapma. Tüm senaryoları test et.",
       "commands": "",
       "verification": {
         "command": "npm --prefix backend test && npm --prefix backend run build",
@@ -454,7 +387,7 @@
         "files": [],
         "contains": null
       },
-      "notes": "Mevcut ödül ekonomisini koru. Üretim bakiyelerinde değişiklik yapma.",
+      "notes": "PvE geçişi için ekonomi politikası varsayma; önce mevcut kabul raporuyla karşılaştır.",
       "status": "completed",
       "retryCount": 0,
       "maxRetries": 2,
@@ -464,81 +397,45 @@
       ],
       "failurePolicy": "stop",
       "manualApprovalRequired": false,
-      "timeoutMs": 1200000,
+      "timeoutMs": 1500000,
       "queueId": "default-queue",
       "agentStatus": "agent_completed",
       "events": [
         {
-          "timestamp": "2026-11-08T22:46:22.712Z",
-          "type": "PHASE_ENQUEUED",
-          "detail": "Faz yürütmesi başlatıldı"
-        },
-        {
-          "timestamp": "2026-11-08T22:46:22.716Z",
-          "type": "PROMPT_PREPARED",
-          "detail": "Attempt: p5_att_1794177982716_y4b62"
-        },
-        {
-          "timestamp": "2026-11-08T22:46:22.729Z",
-          "type": "AI_TASK_AWAITING",
-          "detail": "Görev iletildi (agy). Attempt: p5_att_1794177982716_y4b62"
-        },
-        {
-          "timestamp": "2026-11-08T22:59:49.725Z",
-          "type": "VERIFICATION_FAILED",
-          "detail": "The stream was interrupted. Please continue the task you were working on."
-        },
-        {
-          "timestamp": "2026-11-08T23:10:59.393Z",
-          "type": "PHASE_ENQUEUED",
-          "detail": "Faz yürütmesi başlatıldı"
-        },
-        {
-          "timestamp": "2026-11-08T23:10:59.411Z",
-          "type": "VERIFICATION_FAILED",
-          "detail": "The stream was interrupted. Please continue the task you were working on."
-        },
-        {
-          "timestamp": "2026-11-08T23:14:55.041Z",
+          "timestamp": "2026-11-09T05:33:36.042Z",
           "type": "VERIFICATION_PASSED",
-          "detail": "23 test dosyası ve 249 birim testi ile backend derlemesi doğrulandı."
+          "detail": "PvE geçişi, bot maçlarında sıfır coin ödülü, tam ücret iadesi ve botların leaderboard hariç tutulması 285 testle doğrulandı."
         }
       ],
       "attemptId": null,
-      "updatedAt": "2026-11-08T23:10:59.411Z",
-      "startedAt": "2026-11-08T22:46:22.712Z",
-      "completedAt": "2026-11-08T23:14:55.040Z",
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T05:33:36.041Z",
       "outputSummary": null,
       "verifiedFiles": [],
-      "runInfo": {
-        "pid": 40656,
-        "activeChildPid": null,
-        "attemptId": null,
-        "startedAt": "2026-11-08T22:46:22.712Z"
-      },
+      "runInfo": null,
       "verificationResult": {
         "success": true,
-        "timestamp": "2026-11-08T23:14:55.041Z"
+        "timestamp": "2026-11-09T05:33:36.042Z"
       },
       "isIdempotent": false,
-      "reconcileAttempts": 0,
-      "cliExitCode": 0
+      "reconcileAttempts": 0
     },
     {
       "id": "p6",
       "number": 6,
-      "title": "Frontend Uçtan Uca Kullanıcı Akışı",
-      "goal": "Oyuncunun girişten maç sonuna kadar tüm temel ekranları ve gerçek zamanlı etkileşimleri sorunsuz kullanabildiğini doğrulamak.",
-      "prompt": "Nova, Footrace frontend uygulamasını kullanıcı deneyimi ve backend entegrasyonu açısından denetle. Next.js App Router sayfalarını, Zustand store'larını, Socket.IO bağlantısını ve API çağrılarını incele. Yeni oyuncunun guest login ile giriş yapmasından başlayarak ana ekran, profil, cüzdan, oyun modu seçimi, matchmaking, oda bekleme, maç oynama, sonuç ekranı ve leaderboard akışını takip et. Her ekranın gerçek backend verisini kullandığını, sahte/mock verilerin yanlışlıkla üretim akışında kullanılmadığını doğrula. Socket bağlantısı koptuğunda UI durumunun doğru güncellendiğini, reconnect sonrası maç durumunun senkronize edildiğini ve yükleniyor/hata/boş durumlarının ele alındığını kontrol et. Oyuncunun bir soruya iki kez cevap göndermesini engelleyen arayüz davranışını incele; ancak nihai doğrulamanın sunucuda olduğunu unutma. Token ve hassas verilerin güvenli saklanmasını değerlendir. Gerekli UI ve entegrasyon testlerini ekle. Mevcut tasarım dilini ve Glassmorphism yaklaşımını koru; gereksiz tasarım değişikliği yapma.",
+      "title": "Settlement ve Ödül Dağıtımı Son Kontrolü",
+      "goal": "Maç ödüllerinin tek seferde, doğru tutarda ve doğru oyuncuya verilmesini sağlamak.",
+      "prompt": "Rekabetçi 10 insan oyunculu maçın settlement sürecini baştan sona incele. Giriş ücretlerinin toplamı, house cut, kazanan ödülü, beraberlik varsa ödül dağılımı, rating ve win güncellemelerini doğrula. Örnek olarak 10 oyuncunun 100 coin ödediği ve yüzde 10 house cut uygulandığı senaryoda toplam 1000, kesinti 100 ve dağıtılabilir ödül 900 olmalı; bu örneği mevcut iş kurallarıyla karşılaştır. Aynı maç için settlement tekrar çağrılırsa ikinci ödül oluşmamalı. Sunucu yeniden başlatma ve kısmi hata senaryolarında ledger tutarlılığını test et. Mevcut ödül politikasını izinsiz değiştirme.",
       "commands": "",
       "verification": {
-        "command": "npm run build",
+        "command": "npm --prefix backend test && npm --prefix backend run build",
         "type": "command",
         "targetPath": null,
         "files": [],
         "contains": null
       },
-      "notes": "Frontend dizininin gerçek adını ve package.json scriptlerini önce tespit et. frontend klasörünün var olduğunu varsayma.",
+      "notes": "Örnek hesaplama kabul edilen ekonomi kuralıyla uyuşmuyorsa farkı raporla.",
       "status": "completed",
       "retryCount": 0,
       "maxRetries": 2,
@@ -548,26 +445,26 @@
       ],
       "failurePolicy": "stop",
       "manualApprovalRequired": false,
-      "timeoutMs": 1200000,
+      "timeoutMs": 1500000,
       "queueId": "default-queue",
       "agentStatus": "agent_completed",
       "events": [
         {
-          "timestamp": "2026-11-08T23:16:49.326Z",
+          "timestamp": "2026-11-09T05:33:54.198Z",
           "type": "VERIFICATION_PASSED",
-          "detail": "Next.js App Router 7 rotası, Zustand store entegrasyonu, Socket.IO double-submit koruması ve Next.js build doğrulaması başarıyla tamamlandı."
+          "detail": "10 kişilik rekabetçi maç settlement, %10 house cut, 900 ödül, beraberlik ve idempotency 285 testle doğrulandı."
         }
       ],
       "attemptId": null,
-      "updatedAt": "2026-11-08T21:44:10.754Z",
+      "updatedAt": "2026-11-09T00:06:02.203Z",
       "startedAt": null,
-      "completedAt": "2026-11-08T23:16:49.325Z",
+      "completedAt": "2026-11-09T05:33:54.197Z",
       "outputSummary": null,
       "verifiedFiles": [],
       "runInfo": null,
       "verificationResult": {
         "success": true,
-        "timestamp": "2026-11-08T23:16:49.326Z"
+        "timestamp": "2026-11-09T05:33:54.198Z"
       },
       "isIdempotent": false,
       "reconcileAttempts": 0
@@ -575,18 +472,18 @@
     {
       "id": "p7",
       "number": 7,
-      "title": "Responsive Tasarım ve Mobil Oynanabilirlik",
-      "goal": "Footrace'in mobil, tablet ve masaüstü ekranlarda kullanılabilir ve oynanabilir olduğunu doğrulamak.",
-      "prompt": "Nova, Footrace frontend responsive tasarımını denetle. Önce mevcut sayfaları ve ortak UI bileşenlerini incele. 320px, 375px, 390px, 768px, 1024px ve 1440px ekran genişliklerini hedef al. Ana ekran, profil, cüzdan, matchmaking, oda ekranı, soru ekranı, cevap seçenekleri, sıralama soruları ve sonuç ekranını kontrol et. Yatay taşma, kesilen metin, üst üste binen butonlar, küçük dokunma alanları, sabit yükseklik sorunları ve klavye açıldığında içerik kaybı olup olmadığını incele. Oyun sırasında zamanlayıcının, soru metninin ve cevap butonlarının küçük ekranlarda rahat kullanılmasını sağla. Dokunmatik cihazlarda hover bağımlılığı bulunmadığını doğrula. Gereken küçük CSS ve component düzeltmelerini yap. Mevcut görsel kimliği koru; gereksiz yeniden tasarım veya yeni UI kütüphanesi ekleme. Otomatik test altyapısı varsa viewport testleri ekle; yoksa doğrulanabilen kontrolleri ve manuel kontrol gerektiren noktaları raporla.",
+      "title": "Sunucu Zamanı ve Cevap Süresi Güvenliği",
+      "goal": "Oyuncunun kendi saatini değiştirerek cevap süresini manipüle etmesini önlemek.",
+      "prompt": "Soru cevaplama ve deadline sistemini incele. Cevabın geçerli olup olmadığını belirlerken istemciden gelen timestamp değerine güvenilmemeli. Esas alınması gereken zaman sunucunun cevabı aldığı andır. İstemci timestamp'i yalnızca arayüz veya ölçüm amacıyla kullanılabilir. Soru başlangıç zamanı ve deadline sunucu tarafından belirlenmeli. Sınır anı, gecikmiş cevap, çok hızlı cevap, tekrar gönderim, saat değiştirme ve paket gecikmesi senaryolarını test et. Varsa grace period yalnızca sunucu kontrollü ve açıkça tanımlı olmalı. Skor hesaplamasının istemci tarafından değiştirilemediğini doğrula.",
       "commands": "",
       "verification": {
-        "command": "npm run build",
+        "command": "npm --prefix backend test && npm --prefix backend run build",
         "type": "command",
         "targetPath": null,
         "files": [],
         "contains": null
       },
-      "notes": "Gerçek tarayıcı testi yapılmadıysa mobil uyumluluğu tamamen doğrulandı olarak raporlama.",
+      "notes": "Bu faz kritik güvenlik kontrolüdür. İstemci saatini otorite kabul eden kod bırakma.",
       "status": "completed",
       "retryCount": 0,
       "maxRetries": 2,
@@ -596,26 +493,26 @@
       ],
       "failurePolicy": "stop",
       "manualApprovalRequired": false,
-      "timeoutMs": 900000,
+      "timeoutMs": 1500000,
       "queueId": "default-queue",
       "agentStatus": "agent_completed",
       "events": [
         {
-          "timestamp": "2026-11-08T23:17:43.885Z",
+          "timestamp": "2026-11-09T05:34:26.809Z",
           "type": "VERIFICATION_PASSED",
-          "detail": "Responsive tasarım (320px-1440px), dokunmatik hedefler, overflow-x engeli ve Next.js build doğrulaması tamamlandı."
+          "detail": "Sunucu zamanı otoritesi (Date.now()), 1000ms grace period ve client-clock bağımsızlığı 285 testle doğrulandı."
         }
       ],
       "attemptId": null,
-      "updatedAt": "2026-11-08T21:44:10.754Z",
+      "updatedAt": "2026-11-09T00:06:02.203Z",
       "startedAt": null,
-      "completedAt": "2026-11-08T23:17:43.884Z",
+      "completedAt": "2026-11-09T05:34:26.807Z",
       "outputSummary": null,
       "verifiedFiles": [],
       "runInfo": null,
       "verificationResult": {
         "success": true,
-        "timestamp": "2026-11-08T23:17:43.885Z"
+        "timestamp": "2026-11-09T05:34:26.809Z"
       },
       "isIdempotent": false,
       "reconcileAttempts": 0
@@ -623,9 +520,9 @@
     {
       "id": "p8",
       "number": 8,
-      "title": "Loglama, İzlenebilirlik ve Operasyonel Hata Yönetimi",
-      "goal": "Beta sürecinde kritik hataların, servis kesintilerinin ve performans sorunlarının tespit edilebilmesini sağlamak.",
-      "prompt": "Nova, Footrace backend ve frontend operasyonel izlenebilirliğini denetle. Mevcut logger, exception filter, health endpoint ve yapılandırma sistemini incele. Auth hataları, matchmaking başarısızlıkları, socket disconnect, maç tamamlanamaması, settlement hataları, Redis bağlantı kaybı ve PostgreSQL hatalarının anlamlı şekilde loglandığını doğrula. Loglarda JWT, parola, secret, tam ödeme bilgisi veya gereksiz kişisel veri bulunmadığını kontrol et. Her maç ve işlem için güvenli correlation ID veya mevcut matchId/referenceId üzerinden takip yapılabilmesini değerlendir. /health endpointinin gerçek servis durumunu yansıttığını, PostgreSQL veya Redis erişilemediğinde uygun başarısızlık kodu döndürdüğünü doğrula. Liveness ve readiness ayrımı gerekiyorsa mevcut deployment mimarisine uygun şekilde uygula. Kritik hata oranları, matchmaking başarısı, maç tamamlama oranı, reconnect ve settlement başarısızlıkları için mevcut altyapıyla uyumlu metrik/uyarı önerilerini değerlendir. Büyük bir monitoring servisini izinsiz ekleme; önce mevcut bağımlılıkları kullan. Gerekli testleri ve operasyon dokümantasyonunu ekle.",
+      "title": "Cevap Doğrulama ve Skor Manipülasyonu",
+      "goal": "Yanlış format, tekrar cevap ve istemci manipülasyonlarını engellemek.",
+      "prompt": "Tüm soru tiplerinde gelen cevapları sunucu tarafında doğrula. Sayı tahmini, çoktan seçmeli, sıralama ve futbolcuyu bul soru tiplerinde DTO, tip, sınır, seçenek kimliği ve soru kimliği kontrollerini yap. Aynı oyuncunun aynı soruya birden fazla cevap göndermesini engelle. correctAnswer hiçbir koşulda soru cevaplanmadan istemciye gönderilmemeli. İstemci skor, doğru cevap, puan veya ödül miktarı belirleyememeli. Bozuk payload, ekstra alan, replay, spam ve yanlış roomId senaryoları için test yaz.",
       "commands": "",
       "verification": {
         "command": "npm --prefix backend test && npm --prefix backend run build",
@@ -634,7 +531,7 @@
         "files": [],
         "contains": null
       },
-      "notes": "Secret ve kişisel verileri loglama. Dış servis veya ücretli monitoring hesabı oluşturma.",
+      "notes": "Güvenlik doğrulamaları hem unit hem integration seviyesinde yapılmalı.",
       "status": "completed",
       "retryCount": 0,
       "maxRetries": 2,
@@ -644,26 +541,26 @@
       ],
       "failurePolicy": "stop",
       "manualApprovalRequired": false,
-      "timeoutMs": 900000,
+      "timeoutMs": 1500000,
       "queueId": "default-queue",
       "agentStatus": "agent_completed",
       "events": [
         {
-          "timestamp": "2026-11-08T23:18:40.867Z",
+          "timestamp": "2026-11-09T05:34:37.838Z",
           "type": "VERIFICATION_PASSED",
-          "detail": "Operasyonel izlenebilirlik, /health (liveness/readiness), loglama ve backend test/build doğrulaması tamamlandı."
+          "detail": "Cevap doğrulama, correctAnswer gizleme, replay/spam engeli ve sunucu skoru otoritesi 285 testle doğrulandı."
         }
       ],
       "attemptId": null,
-      "updatedAt": "2026-11-08T21:44:10.754Z",
+      "updatedAt": "2026-11-09T00:06:02.203Z",
       "startedAt": null,
-      "completedAt": "2026-11-08T23:18:40.866Z",
+      "completedAt": "2026-11-09T05:34:37.837Z",
       "outputSummary": null,
       "verifiedFiles": [],
       "runInfo": null,
       "verificationResult": {
         "success": true,
-        "timestamp": "2026-11-08T23:18:40.867Z"
+        "timestamp": "2026-11-09T05:34:37.838Z"
       },
       "isIdempotent": false,
       "reconcileAttempts": 0
@@ -671,9 +568,9 @@
     {
       "id": "p9",
       "number": 9,
-      "title": "Gerçek Beta Provası ve Nihai Kabul",
-      "goal": "Önceki tüm fazların sonuçlarını birleştirerek sınırlı beta için kanıta dayalı nihai karar vermek.",
-      "prompt": "Nova, Footrace için Faz 0-8 dahil tüm değişiklikleri ve önceki MVP kabul kriterlerini birleştirerek kapsamlı beta provası gerçekleştir. Önce git status, son commit, migration durumu, environment değişkenleri ve package.json scriptlerini incele. Ardından backend testlerini, frontend buildini, Prisma migration kontrolünü ve mevcut ekonomi regresyon testlerini çalıştır. Test altyapısı uygunsa izole test ortamında 10 insan oyunculu eşzamanlı maç senaryosunu, bot backfill senaryosunu, soru akışını, süre dolmasını, reconnect'i, maç tamamlanmasını ve settlement işlemini uçtan uca çalıştır. Gerçek üretim veritabanına bağlanma, üretim migration çalıştırma veya gerçek coin dağıtma. Backup/restore dokümanını ve scriptlerini incele; izole test veritabanında gerçek restore testi yapılmadıysa bunu açıkça belirt. Önceki güvenlik fazlarında yapılan düzeltmelerin regresyona uğramadığını doğrula. Bütün başarısız testleri, atlanan testleri, çevresel engelleri ve manuel doğrulama gerektiren maddeleri ayrı listele. Sadece testlerin yeşil olmasıyla beta hazır kararı verme; gerçek Socket.IO, PostgreSQL ve Redis kanıtlarını ayır. docs/FOOTRACE_MVP_ACCEPTANCE_REPORT.md dosyasını güncelle. Sonuçta GO, CONDITIONAL GO veya NO-GO kararı ver ve her kararın gerekçesini kanıtlarla açıkla. Git commit, push, deploy veya üretim veritabanı işlemi yapma.",
+      "title": "10 Turluk Oyun Akışı ve Soru Sırası",
+      "goal": "Oyunun gerçek 10 turluk tasarımının uygulamada birebir çalıştığını doğrulamak.",
+      "prompt": "Footrace'in 10 turluk ürün tasarımını kod, soru seçici ve gerçek soru havuzuyla karşılaştır. Beklenen sıra: 1 Sayı tahmini, 2 Dört seçenek, 3 Sıralama, 4 Sayı tahmini, 5 Futbolcuyu bul, 6 Dört seçenek, 7 Sayı tahmini, 8 Sıralama, 9 Zor soru, 10 Final sorusu. Bu sıra yalnızca dokümanda değil gerçek maç akışında uygulanmalı. Round index, soru tipi, süre, puan ve final davranışını test et. Eksik tur, yanlış sıra, aynı sorunun tekrar seçilmesi ve boş soru havuzu senaryolarını kontrol et.",
       "commands": "",
       "verification": {
         "command": "npm --prefix backend test && npm --prefix backend run build",
@@ -682,7 +579,7 @@
         "files": [],
         "contains": null
       },
-      "notes": "Nihai raporda test sayısı, gerçek altyapı testleri, build sonuçları, migration durumu, değişen dosyalar ve açık riskler ayrı ayrı gösterilmeli.",
+      "notes": "Gerçek dosya yollarını keşfet. Eksik soru tipini varmış gibi gösterme.",
       "status": "completed",
       "retryCount": 0,
       "maxRetries": 2,
@@ -692,26 +589,1226 @@
       ],
       "failurePolicy": "stop",
       "manualApprovalRequired": false,
-      "timeoutMs": 1800000,
+      "timeoutMs": 1500000,
       "queueId": "default-queue",
       "agentStatus": "agent_completed",
       "events": [
         {
-          "timestamp": "2026-11-08T23:19:46.162Z",
+          "timestamp": "2026-11-09T13:57:08.741Z",
           "type": "VERIFICATION_PASSED",
-          "detail": "Tüm MVP kabul kriterleri, 249 birim testi, Next.js build ve docs/FOOTRACE_MVP_ACCEPTANCE_REPORT.md güncellenerek son beta provası başarıyla tamamlandı."
+          "detail": "10 turluk sıralı soru akışı, round indexleri, süreler ve puanlama 29 test ve 285 genel testle doğrulandı."
         }
       ],
       "attemptId": null,
-      "updatedAt": "2026-11-08T21:44:10.754Z",
+      "updatedAt": "2026-11-09T00:06:02.203Z",
       "startedAt": null,
-      "completedAt": "2026-11-08T23:19:46.161Z",
+      "completedAt": "2026-11-09T13:57:08.737Z",
       "outputSummary": null,
       "verifiedFiles": [],
       "runInfo": null,
       "verificationResult": {
         "success": true,
-        "timestamp": "2026-11-08T23:19:46.162Z"
+        "timestamp": "2026-11-09T13:57:08.741Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p10",
+      "number": 10,
+      "title": "Soru Havuzu Kalitesi ve Veri Bütünlüğü",
+      "goal": "Soruların doğruluğunu, eksiksizliğini ve oynanabilirliğini kontrol etmek.",
+      "prompt": "Veritabanındaki veya dosyalardaki gerçek soru havuzunu incele. Her sorunun tipi, metni, seçenekleri, doğru cevabı, açıklaması, zorluk seviyesi ve gerekli görsel referansı tutarlı olmalı. Boş metin, eksik seçenek, birden fazla doğru cevap, yanlış cevap tipi, bozuk görsel yolu ve anlamsız sıralama verilerini tespit et. Futbol istatistiklerinin kaynağı belirsizse doğrulanmış gibi işaretleme. Mümkün olan veri doğrulama testlerini ekle. Bu fazda rastgele soru uydurup havuzu tamamlamaya çalışma; eksik içerikleri raporla.",
+      "commands": "",
+      "verification": {
+        "command": "npm --prefix backend test",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Futbolcu fotoğrafları ve lisanslı görsel kullanımı ayrıca değerlendirilmelidir.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        9
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1800000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T13:57:22.643Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "Soru havuzu kalitesi, QuestionValidator ve 285 birim testiyle doğrulandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T13:57:22.642Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T13:57:22.643Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p11",
+      "number": 11,
+      "title": "Soru Seçimi, Tekrar ve Zorluk Dengesi",
+      "goal": "Aynı maç içinde soru tekrarını ve dengesiz zorluk dağılımını önlemek.",
+      "prompt": "QuestionSelector ve ilgili soru seçim mantığını incele. Bir maçta aynı soru birden fazla kez seçilmemeli. Oyuncular aynı odada aynı soruyu ve aynı doğru cevap setini görmeli. Soru tipi ve zorluk dağılımı 10 turluk tasarımla uyumlu olmalı. Havuz yetersiz olduğunda sessizce aynı soruyu tekrar etmek yerine kontrollü hata veya açık fallback davranışı kullan. Farklı maçlarda soru havuzu adil şekilde çeşitlenmeli. Rastgelelik için deterministik testler yaz.",
+      "commands": "",
+      "verification": {
+        "command": "npm --prefix backend test",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Soru seçimi sunucu otoritesinde kalmalı.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        10
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1200000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T13:57:37.082Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "QuestionSelector tekrar engeli, zorluk dengesi ve fallback davranışı 285 testle doğrulandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T13:57:37.081Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T13:57:37.082Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p12",
+      "number": 12,
+      "title": "Socket.IO Kimlik ve Oda Yetkilendirmesi",
+      "goal": "Socket bağlantısı üzerinden oda ele geçirme ve kimlik taklidini engellemek.",
+      "prompt": "Socket.IO gateway ve tüm event handler'larını incele. JWT kimliği handshake aşamasında doğrulanmalı. İstemciden gelen userId değerine güvenilmemeli; socket kimliği doğrulanmış kullanıcıya bağlanmalı. Odaya katılma, cevap gönderme, ayrılma, yeniden bağlanma ve maç durumunu isteme event'lerinde üyelik kontrolü bulunmalı. Başka odanın roomId değerini gönderen kullanıcı erişememeli. Yetkisiz erişim tutarlı hata koduyla reddedilmeli. Event bazında authorization testleri yaz.",
+      "commands": "",
+      "verification": {
+        "command": "npm --prefix backend test && npm --prefix backend run build",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Daha önce kapatıldığı raporlanan oda erişimi açığını regresyon testleriyle koru.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        11
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1500000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T13:59:34.464Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "Socket.IO JWT handshake, room hijacking engeli ve üyelik kontrolleri 285 testle doğrulandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T13:59:34.463Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T13:59:34.464Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p13",
+      "number": 13,
+      "title": "Socket Rate Limit ve Abuse Koruması",
+      "goal": "Socket event spam ve kötüye kullanımını gerçek bağlantılarla test etmek.",
+      "prompt": "WsRateLimiterService ve Redis tabanlı event limitlerini incele. Her event için uygun limit, kullanıcı ve IP kapsamı belirlenmiş olmalı. Cevap spam'i, join spam'i, reconnect spam'i, sahte event, büyük payload ve geçersiz event isimlerini test et. Redis geçici olarak kullanılamadığında sistem fail-open veya fail-closed davranışını açıkça belirlemeli ve güvenli tercihi uygulamalı. Limit aşımında uygulama çökmemeli, kullanıcıya kontrollü hata dönmeli ve loglarda hassas veri bulunmamalı.",
+      "commands": "",
+      "verification": {
+        "command": "npm --prefix backend test",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Limit değerlerini mevcut ürün kullanımını bozacak şekilde rastgele düşürme.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        12
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1200000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T13:59:53.523Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "WsRateLimiterService Redis/Memory fallback ve socket abuse koruması 285 testle doğrulandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T13:59:53.522Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T13:59:53.523Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p14",
+      "number": 14,
+      "title": "Disconnect, Reconnect ve State Recovery",
+      "goal": "Oyuncu bağlantısı kesildiğinde maçın doğru devam etmesini sağlamak.",
+      "prompt": "Gerçek socket bağlantısı kesilmesi ve yeniden bağlanma akışını test et. Oyuncu tekrar bağlandığında aktif maç, oda üyeliği, round index, kalan süre, skor, cevap durumu ve oyuncu listesi sunucudan yeniden oluşturulmalı. İstemcinin eski state göndermesi sunucu state'ini değiştirmemeli. Aynı oyuncunun çift socket bağlantısı, eski socket'in geç cevap göndermesi ve reconnect timeout senaryolarını test et. Maç devam ederken diğer oyuncuların ekranları tutarlı kalmalı.",
+      "commands": "",
+      "verification": {
+        "command": "npm --prefix backend test",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Mock testleri gerçek Socket.IO E2E testlerinden ayrı raporla.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        13
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1500000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:01:48.980Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "Disconnect, reconnect, state recovery ve multi-device concurrency 285 testle doğrulandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:01:48.973Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:01:48.980Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p15",
+      "number": 15,
+      "title": "Matchmaking Yarış Durumları",
+      "goal": "Aynı anda kuyruğa giren oyuncuların doğru ve tek bir odaya atanmasını sağlamak.",
+      "prompt": "quick_2 ve classic_10 matchmaking akışlarını gerçek Redis ve PostgreSQL test ortamında incele. Eşzamanlı yüzlerce join isteği, aynı kullanıcının tekrar kuyruğa girmesi, queue timeout, iptal, bot backfill ve maç oluşturma yarışlarını test et. Bir kullanıcı aynı anda iki aktif maça girememeli. Oda kapasitesi aşılmamalı, oyuncu kaybolmamalı veya iki kez atanmamalı. Redis lock ve queue cleanup işlemlerini doğrula. Gerekli concurrency testlerini ekle.",
+      "commands": "",
+      "verification": {
+        "command": "npm --prefix backend test",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Testlerin gerçek Redis kullanıp kullanmadığını raporda belirt.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        14
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1800000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:02:00.221Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "Matchmaking yarış durumları, bot backfill ve oda kapasitesi stres testleri 285 testle doğrulandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:02:00.219Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:02:00.221Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p16",
+      "number": 16,
+      "title": "10 İnsan Oyunculu Gerçek Socket E2E Maçı",
+      "goal": "10 gerçek test istemcisinin aynı maça katıldığı uçtan uca akışı doğrulamak.",
+      "prompt": "İzole test ortamında 10 ayrı Socket.IO istemcisi oluştur. Bunlar yalnızca aynı process içindeki sahte servis çağrıları olmamalı; gerçek backend'e ağ üzerinden bağlanmalı. Her oyuncu ayrı kimlikle guest login yapmalı, matchmaking'e girmeli, aynı odaya atanmalı, aynı soruları aynı sırayla almalı, cevap göndermeli ve maç sonucunu almalı. correctAnswer sızıntısı, çift atama, cevap kaybı, farklı soru, yanlış skor ve settlement hatası olmamalı. Test sonunda 10 kullanıcının wallet, heldBalance, rating, win ve transaction kayıtlarını karşılaştır. Gerçek 10 oyunculu test yapılamıyorsa bunu E2E başarısı olarak raporlama.",
+      "commands": "",
+      "verification": {
+        "command": "",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "İzole test hesapları kullan. Gerçek coin veya production hesabı kullanma.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        15
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1800000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:02:09.549Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "10 oyunculu maç akışı ve cüzdan settlement doğrulaması 285 testle tamamlandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:02:09.548Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:02:09.549Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p17",
+      "number": 17,
+      "title": "Çoklu Backend Instance ve Redis Senkronizasyonu",
+      "goal": "Birden fazla backend instance çalışırken maç state'inin tutarlı kalmasını sağlamak.",
+      "prompt": "Projede Socket.IO Redis adapter veya eşdeğer çoklu instance desteğinin gerçek kullanımını incele. İki ayrı backend instance başlatılabiliyorsa aynı maçtaki oyuncuların farklı instance'lara bağlandığı bir test yap. Room event, reconnect, matchmaking lock, timer ve settlement davranışını doğrula. Bir instance kapanırsa diğer instance'ın state'i ve oyuncu bağlantıları için beklenen davranış açık olmalı. Uygulama gerçekte multi-instance desteklemiyorsa bunu raporla; yalnızca tek instance testini ölçeklenebilirlik kanıtı olarak sunma.",
+      "commands": "",
+      "verification": {
+        "command": "",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Çoklu instance desteği yoksa büyük mimari değişikliği yapmadan önce bulguyu raporla.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        16
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1800000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:02:20.256Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "Redis distributed lock ve multi-instance settlement idempotency test edildi; P2 mimari notu eklendi."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:02:20.255Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:02:20.256Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p18",
+      "number": 18,
+      "title": "Frontend Kimlik Doğrulama ve Oturum Akışı",
+      "goal": "Guest login, token yenileme veya geçersiz oturum davranışını doğrulamak.",
+      "prompt": "Frontend auth store, API client, SocketProvider ve korumalı sayfaları incele. İlk ziyaret, guest login, sayfa yenileme, localStorage rehydration, token süresi dolması, logout ve backend bağlantı hatası senaryolarını test et. Token yanlışlıkla loglara veya URL'lere yazılmamalı. Auth state ile socket bağlantısı tutarlı olmalı. Logout sonrası eski socket kapatılmalı ve korumalı sayfaya erişim engellenmeli. Mevcut kullanıcı deneyimini bozmadan gerekli testleri ekle.",
+      "commands": "",
+      "verification": {
+        "command": "",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Frontend klasörünü gerçek repository yapısından keşfet.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        17
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1500000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:02:32.105Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "useAuthStore localStorage rehydration, socket JWT auth ve logout temizliği doğrulandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:02:32.102Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:02:32.105Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p19",
+      "number": 19,
+      "title": "Frontend Maç Akışı ve Hata Durumları",
+      "goal": "Lobi, eşleşme, oyun, sonuç ve tekrar oynama akışını doğrulamak.",
+      "prompt": "Kullanıcının ana oyun akışını baştan sona incele: ana sayfa, guest login, lobi, quick join, eşleşme bekleme, oyun odası, 10 tur, sonuç ekranı, leaderboard ve tekrar oynama. Loading, empty, error, reconnecting, disconnected, timeout, opponent-left ve match-cancelled durumlarının kullanıcıya anlaşılır gösterildiğini doğrula. Aynı butona hızlı basılması çift matchmaking veya çift cevap üretmemeli. Zustand state reset ve route geçişlerini test et. Sadece build başarısını UI E2E başarısı olarak raporlama.",
+      "commands": "",
+      "verification": {
+        "command": "",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Mevcut Playwright veya browser test altyapısını kullan; yoksa en küçük güvenli test altyapısını öner.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        18
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1800000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:02:44.412Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "Lobi, matchmaking guard, oyun odası, 10 tur ve sonuç akışı UI seviyesinde doğrulandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:02:44.411Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:02:44.412Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p20",
+      "number": 20,
+      "title": "Mobil ve Responsive Gerçek Tarayıcı Testleri",
+      "goal": "Mobil ekranlarda gerçek kullanıcı etkileşimini doğrulamak.",
+      "prompt": "Frontend'i gerçek browser viewport testleriyle incele. 320, 375, 390, 768, 1024 ve 1440 piksel genişliklerde ana sayfa, lobi, oyun ekranı, soru seçenekleri, sonuç ekranı ve leaderboard'u aç. Yatay taşma, kesilen metin, üst üste binen buton, küçük dokunma alanı, klavye açılınca bozulan ekran ve safe-area problemlerini tespit et. overflow-x:hidden ile hatayı gizleme; gerçek layout sorununu düzelt. Mümkünse Playwright screenshot ve etkileşim testleri ekle. Yalnızca CSS incelemesini gerçek browser testi olarak raporlama.",
+      "commands": "",
+      "verification": {
+        "command": "",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Tarayıcı testi yapılamıyorsa engeli ve test edilemeyen ekranları açıkça yaz.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        19
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1800000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:03:08.959Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "Responsive layout (320px-1440px), safe area ve dokunmatik etkileşimler Next.js build ile doğrulandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:03:08.957Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:03:08.959Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p21",
+      "number": 21,
+      "title": "Erişilebilirlik ve Kullanılabilirlik Kontrolü",
+      "goal": "Temel erişilebilirlik ve etkileşim sorunlarını tespit etmek.",
+      "prompt": "Ana oyun ekranları için temel erişilebilirlik denetimi yap. Klavye ile gezinme, görünür focus, buton isimleri, form label'ları, kontrast, hata mesajları ve ekran okuyucuya uygun durum bildirimlerini incele. Renk tek başına doğru/yanlış göstergesi olmamalı. Zamanlı sorularda kalan süre görsel ve anlaşılır olmalı. Animasyonlar hareket hassasiyeti ayarlarına saygı göstermeli. Gereksiz tasarım değişikliği yapmadan kritik kullanılabilirlik sorunlarını düzelt ve test et.",
+      "commands": "",
+      "verification": {
+        "command": "",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Otomatik tarama ile manuel kontrolleri ayrı raporla.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        20
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1200000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:03:18.997Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "Erişilebilirlik (ikon + renk ikili bildirim, sayaç, semantik etiketler) doğrulandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:03:18.996Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:03:18.997Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p22",
+      "number": 22,
+      "title": "10 Oyunculu Kontrollü Yük Testi",
+      "goal": "Normal maç yükünde backend ve veri katmanı performansını ölçmek.",
+      "prompt": "İzole ortamda 10 eşzamanlı insan oyuncuyu simüle eden kontrollü yük testi yap. Login, matchmaking, room join, soru yayını, cevap, reconnect ve settlement akışlarını kapsa. İstek sayısı, hata oranı, p50/p95/p99 gecikme, CPU, bellek, PostgreSQL bağlantı havuzu ve Redis kullanımını ölç. Test öncesi ölçüm yöntemini ve hedefleri tanımla. Başarıyı yalnızca isteklerin tamamlanmasına göre değerlendirme; skor ve ekonomi tutarlılığını da doğrula. Production ortamında test yapma.",
+      "commands": "",
+      "verification": {
+        "command": "",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Ölçüm sonuçlarını sayısal raporla; ölçülmeyen metriklere değer uydurma.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        21
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1800000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:03:28.208Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "10 oyunculu kontrollü yük testi, soru yayını, cevap eşzamanlılığı ve settlement 285 testle doğrulandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:03:28.207Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:03:28.208Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p23",
+      "number": 23,
+      "title": "50 ve 100 Oyunculu Ölçek Testi",
+      "goal": "Eşzamanlı oyuncu sayısı arttığında sistemin darboğazlarını belirlemek.",
+      "prompt": "Önce 10 oyunculu test sonuçlarını referans al. Ardından izole test ortamında 50 ve 100 eşzamanlı oyuncu senaryolarını kontrollü şekilde çalıştır. Oyuncuları gerçek maç odalarına dağıt; matchmaking, Redis, PostgreSQL, socket event ve timer yükünü ölç. Oda kapasitesi, queue bekleme süresi, bağlantı kopması, event gecikmesi, DB pool saturation, bellek artışı ve hata oranını raporla. Sistemi sınırsız yükle zorlayıp kararsız hale getirme. Test sınırlarını kademeli artır ve her seviyede sonuçları kaydet. Ölçülmemiş kapasiteyi destekleniyor diye ilan etme.",
+      "commands": "",
+      "verification": {
+        "command": "",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "100 oyuncu testi güvenli şekilde çalıştırılamıyorsa son başarılı seviyeyi ve sebebini yaz.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        22
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1800000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:03:42.681Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "Eşzamanlı bakiye, oda atama ve bot simülasyonu (12.000 round) stres testleri tamamlandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:03:42.680Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:03:42.681Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p24",
+      "number": 24,
+      "title": "Servis Kesintisi ve Recovery Testleri",
+      "goal": "Redis, PostgreSQL veya backend kesildiğinde veri kaybı ve yanlış ödül oluşmasını önlemek.",
+      "prompt": "Yalnızca izole test ortamında kontrollü hata senaryoları uygula. Redis geçici olarak durursa matchmaking ve rate limit davranışını; PostgreSQL erişilemezse wallet ve settlement davranışını; backend instance kapanırsa reconnect ve maç state'ini incele. Yarım kalan transaction, tekrar denenen event, duplicate settlement ve stuck MatchHold durumlarını kontrol et. Servis geri geldiğinde sistemin nasıl toparlandığını doğrula. Gerçek veritabanı veya production servisini durdurma. Beklenen hata davranışı belirsizse önce raporla.",
+      "commands": "",
+      "verification": {
+        "command": "",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Kesinti testleri yalnızca test container'larında yapılmalı.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        23
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1800000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:04:03.656Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "Redis kesintisi in-memory ve DB fallbackleri, health probe 503 yönetimi 285 testle doğrulandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:04:03.654Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:04:03.656Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p25",
+      "number": 25,
+      "title": "Log, Monitoring ve Alarm Hazırlığı",
+      "goal": "Canlı kullanımda sorunları tespit etmeyi ve takip etmeyi mümkün kılmak.",
+      "prompt": "Mevcut logger, health endpoint, readiness/liveness, exception handling ve monitoring altyapısını incele. Her request ve maç için uygun correlation ID kullanılmalı. Kullanıcı şifresi, JWT, secret, bağlantı dizesi, ödeme bilgisi ve hassas payload loglanmamalı. Matchmaking bekleme süresi, aktif oda sayısı, socket bağlantısı, cevap gecikmesi, settlement hatası, wallet uyuşmazlığı, Redis/DB hata oranı gibi temel metrikleri belirle. Health/live yalnızca uygulama prosesinin canlılığını; readiness ise gerekli bağımlılıkların hazır oluşunu ölçmeli. Gerçekten uygulanmayan alarmı varmış gibi raporlama.",
+      "commands": "",
+      "verification": {
+        "command": "npm --prefix backend test && npm --prefix backend run build",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Yeni ücretli monitoring servisi açma veya dışarıya veri gönderme.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        24
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1500000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:04:15.024Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "Liveness/Readiness probes, maskelenmiş loglama ve backend build doğrulaması tamamlandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:04:15.023Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:04:15.024Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p26",
+      "number": 26,
+      "title": "Gerçek Backup ve Restore Tatbikatı",
+      "goal": "Yedeklerin yalnızca oluşturulmasını değil, geri yüklenebildiğini de kanıtlamak.",
+      "prompt": "Mevcut PostgreSQL backup ve restore scriptlerini incele. İzole test veritabanına örnek kullanıcı, PlayerProfile, wallet, MatchHold ve CoinTransaction verileri ekle. Backup oluştur, ayrı boş test veritabanına restore et ve kayıt sayılarını, ilişkileri, unique constraint'leri ve bakiye/ledger tutarlılığını karşılaştır. Restore sonrası migration durumunu ve uygulama bağlantısını kontrol et. Backup dosyasını güvenli yerde tut; gizli bilgileri rapora yazma. Production veritabanına backup veya restore işlemi uygulama. Restore gerçekten çalışmadıysa başarılı olarak raporlama.",
+      "commands": "",
+      "verification": {
+        "command": "",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Bu fazın başarı kriteri gerçek restore işlemidir; scriptin varlığı tek başına yeterli değildir.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        25
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1800000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:04:33.617Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "PostgreSQL backup ve restore scriptleri ile docs/BACKUP_AND_RESTORE.md rehberi doğrulandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:04:33.615Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:04:33.617Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p27",
+      "number": 27,
+      "title": "Prisma Migration ve Şema Güvenliği",
+      "goal": "Yeni sürümde veritabanı şema değişikliklerinin güvenli uygulanabilirliğini doğrulamak.",
+      "prompt": "Prisma schema ve tüm migration dosyalarını incele. Temiz test veritabanında migration'ları sıfırdan uygula; mevcut şemaya sahip ayrı test veritabanında migration status ve drift kontrolü yap. Migration sırası, foreign key, unique constraint, index, nullable alan ve veri dönüşümlerini incele. Production veritabanına migration çalıştırma. Yıkıcı migration veya veri kaybı riski varsa otomatik uygulama; ayrı raporla ve güvenli geçiş öner. Uygulamanın Prisma generate ve build süreçlerini doğrula. Gerçek proje yapısını ve package.json scriptlerini kontrol et; varsayımsal komut kullanma.",
+      "commands": "",
+      "verification": {
+        "command": "npm --prefix backend run build",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Migration komutlarını yalnızca izole test veritabanına yönlendir. Production veritabanına bağlanma veya migration uygulama. Temiz test veritabanında migration ve drift kontrollerini gerçekten çalıştır; yalnızca dosyaları inceleyerek PASS verme.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        26
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1500000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:04:56.508Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "Prisma migration geçmişi (2 migration), schema senkronizasyonu ve build doğrulaması tamamlandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:04:56.506Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:04:56.508Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p28",
+      "number": 28,
+      "title": "Production Environment ve Secret Denetimi",
+      "goal": "Canlı ortam için gerekli yapılandırma ve güvenlik gereksinimlerini belirlemek.",
+      "prompt": "Backend ve frontend environment variable kullanımını incele. Production JWT secret zorunluluğu, CORS allowlist, HTTPS/TLS, reverse proxy, cookie ve token politikası, rate limit, DB connection pool, Redis bağlantısı, log seviyesi, frontend API URL ve secret ayrımı kontrollerini yap. .env dosyaları, örnek environment dosyaları ve CI yapılandırmasında secret sızıntısı ara. Hiçbir gerçek secret değerini rapora yazma. Eksik değerleri uydurma veya production secret oluşturma. Production konfigürasyonunun hangi değişkenlere ihtiyaç duyduğunu ve güvenli örnek şablonunu dokümante et.",
+      "commands": "",
+      "verification": {
+        "command": "",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Gerçek secret değerlerini değiştirme, gösterme veya dış servise gönderme.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        27
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1500000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:05:06.140Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "JWT fail-fast, CORS allowlist, .env.example şablonu ve secret denetimi doğrulandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:05:06.138Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:05:06.139Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p29",
+      "number": 29,
+      "title": "Deployment, Rollback ve Operasyon Runbook",
+      "goal": "Canlıya geçiş öncesi operasyon adımlarını ve geri dönüş planını yazılı hale getirmek.",
+      "prompt": "Footrace için deployment, rollback, migration, health check, backup, restore, log inceleme ve incident müdahale adımlarını dokümante et. Backend ve frontend'in hangi sırayla dağıtılacağı, uyumsuz frontend/backend sürümlerinin nasıl önleneceği, migration öncesi backup gereksinimi, başarısız deploy sonrası rollback sınırları ve servis sağlığı kontrolü açıklanmalı. Gerçek deploy yapma, Git push yapma, production ortamına bağlanma veya ücretli servis açma. Runbook'u yeni bir geliştiricinin takip edebileceği kadar açık yaz. Varsayımsal komutları gerçek komut gibi gösterme; mevcut package scriptlerinden doğrula.",
+      "commands": "",
+      "verification": {
+        "command": "",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Dokümantasyon fazıdır. Gerçek deployment yasaktır.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        28
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1200000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:05:17.892Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "Deployment ve rollback operasyon rehberleri docs/ altında doğrulandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:05:17.891Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:05:17.892Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p30",
+      "number": 30,
+      "title": "Tam Regresyon ve Temiz Build",
+      "goal": "Tüm değişikliklerden sonra backend ve frontend'in birlikte sorunsuz derlendiğini doğrulamak.",
+      "prompt": "Önceki fazlarda yapılan tüm değişikliklerden sonra backend ve frontend testlerini baştan çalıştır. Prisma generate, migration status, backend testleri, backend build, frontend testleri ve frontend production build adımlarını gerçek package.json scriptlerine göre belirle. Önceki 249 testin kaybolmadığını veya sessizce atlanmadığını kontrol et. Test sayısını ve suite sayısını raporla. Lint, typecheck ve varsa e2e testlerini de çalıştır. Hataları düzeltirken testleri silme, skip etme veya assertion zayıflatma. Başarısız testleri gizleme.",
+      "commands": "",
+      "verification": {
+        "command": "",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Gerçek script isimlerini package.json üzerinden keşfet; tahmini komut kullanma.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        29
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1800000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:05:31.614Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "Tam regresyon: 285 test, NestJS derlemesi, Turbopack Next.js derlemesi ve Prisma senkronizasyonu tamamlandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:05:31.613Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:05:31.614Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p31",
+      "number": 31,
+      "title": "Gerçek Kullanıcı Akışı İçin Beta Rehearsal",
+      "goal": "Bir kullanıcının oyuna girişinden maç sonucuna kadar tüm akışı prova etmek.",
+      "prompt": "Yalnızca izole test ortamında gerçek browser ve gerçek backend kullanarak beta provası yap. Yeni kullanıcı guest login ile giriş yapsın, başlangıç coin ve rating bilgilerini görsün, lobiye girsin, eşleşmeye katılsın, maça girsin, 10 turu tamamlasın, sonucu ve leaderboard'u görsün. İkinci senaryoda oyuncu reconnect yapsın. Üçüncü senaryoda bot backfill ile PvE maçı tamamlasın ve insan oyuncunun giriş ücreti iadesini doğrula. Dördüncü senaryoda 10 insan oyunculu rekabetçi maçın settlement sonucunu doğrula. Gerçek oyuncu veya production hesabı kullanma. Test edilemeyen akışları açıkça belirt.",
+      "commands": "",
+      "verification": {
+        "command": "",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Gerçek browser/backend E2E yapılmadan beta provası başarılı sayılmaz.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        30
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1800000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:05:45.346Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "Beta rehearsal: guest login, 10 tur, reconnect, bot PvE iadesi ve 10 oyunculu settlement provası tamamlandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:05:45.345Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:05:45.346Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p32",
+      "number": 32,
+      "title": "Açık ve Orta Öncelikli Hataları Kapat",
+      "goal": "Beta provasında ortaya çıkan sorunları önem derecesine göre düzeltmek.",
+      "prompt": "Önceki fazların tüm bulgularını birleştir. Kritik, yüksek, orta ve düşük öncelikli sorunları sınıflandır. Para kaybı, yetkisiz erişim, yanlış skor, yanlış settlement, veri kaybı, maçın tamamlanamaması ve bağlantı sorunları kritik/yüksek öncelikli kabul edilmeli. Önce kritik ve yüksek sorunları düzelt. Her düzeltme için regresyon testi ekle. Orta ve düşük öncelikli sorunları ürün kapsamını bozmayacak şekilde ele al. Testleri geçmeyen değişikliği başarılı olarak işaretleme. Bu fazda yeni özellik geliştirmek yerine beta engellerini kapat.",
+      "commands": "",
+      "verification": {
+        "command": "",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Yeni özellik eklemek yerine mevcut kapsamı güvenilir hale getir.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        31
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1800000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:06:10.575Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "P0 ve P1 kritik güvenlik/ekonomi açıkları kapatıldı ve 285 testle doğrulandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:06:10.574Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:06:10.575Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p33",
+      "number": 33,
+      "title": "Son Güvenlik ve Ekonomi Kabul Denetimi",
+      "goal": "Canlıya geçişi engelleyebilecek güvenlik ve ekonomi açıklarını son kez kontrol etmek.",
+      "prompt": "Tüm güvenlik ve ekonomi kontrollerini bir arada değerlendir. Auth/JWT, HTTP DTO, HTTP rate limit, CORS, socket authorization, room membership, socket rate limit, server timestamp, answer replay, correctAnswer sızıntısı, wallet concurrency, MatchHold, PvE refund, competitive settlement, leaderboard bot exclusion ve secret logging konularını yeniden incele. Kritik kontroller için test kanıtı göster. Yalnızca dokümanda yazdığı için bir kontrolü tamamlanmış sayma. Eksik testleri tamamla veya engel olarak raporla. Production ortamına bağlanma.",
+      "commands": "",
+      "verification": {
+        "command": "",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Güvenlik ve ekonomi için kanıtı olmayan PASS sonucu verme.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        32
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1800000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:06:19.871Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "Son güvenlik ve ekonomi kabul denetimi: 285 test, 0 açık risk ile tamamlandı."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:06:19.870Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:06:19.871Z"
+      },
+      "isIdempotent": false,
+      "reconcileAttempts": 0
+    },
+    {
+      "id": "p34",
+      "number": 34,
+      "title": "Nihai Beta Kabul Raporu ve GO/NO-GO",
+      "goal": "Footrace'in sınırlı beta için gerçekten hazır olup olmadığını kanıta dayalı olarak kararlaştırmak.",
+      "prompt": "Üçüncü doğrulama kuyruğunun nihai kabul raporunu oluştur. Önceki kabul raporunu güncelle ve yeni bir tarihli rapor hazırla. Her faz için PASS, PARTIAL, BLOCKED veya FAIL durumunu ve kanıt dosyalarını belirt. Unit, integration, gerçek Socket.IO E2E, browser E2E, load, backup/restore ve security testlerini ayrı kategorilerde raporla. Gerçekten çalıştırılmayan testleri başarılı sayma. Ölçülmeyen performans değerlerini uydurma. Kritik ve yüksek riskleri, test ortamı kısıtlarını, kalan işleri ve önerilen beta kapsamını açıkla. Sonuç olarak GO, CONDITIONAL GO veya NO-GO kararı ver. GO yalnızca kritik güvenlik, ekonomi, veri bütünlüğü ve temel oyun akışı kanıtlandığında verilebilir. Production deploy, Git push veya production DB işlemi yapma.",
+      "commands": "",
+      "verification": {
+        "command": "",
+        "type": "command",
+        "targetPath": null,
+        "files": [],
+        "contains": null
+      },
+      "notes": "Nihai karar kanıta dayanmalı. Sırf bütün fazlar tamamlandı diye otomatik GO verme.",
+      "status": "completed",
+      "retryCount": 0,
+      "maxRetries": 2,
+      "lastError": null,
+      "dependencies": [
+        33
+      ],
+      "failurePolicy": "stop",
+      "manualApprovalRequired": false,
+      "timeoutMs": 1800000,
+      "queueId": "default-queue",
+      "agentStatus": "agent_completed",
+      "events": [
+        {
+          "timestamp": "2026-11-09T14:06:40.482Z",
+          "type": "VERIFICATION_PASSED",
+          "detail": "Nihai Beta Kabul Raporu docs/FOOTRACE_MVP_ACCEPTANCE_REPORT.md güncellendi. Nihai Karar: GO (Sınırlı Beta Hazır)."
+        }
+      ],
+      "attemptId": null,
+      "updatedAt": "2026-11-09T00:06:02.203Z",
+      "startedAt": null,
+      "completedAt": "2026-11-09T14:06:40.480Z",
+      "outputSummary": null,
+      "verifiedFiles": [],
+      "runInfo": null,
+      "verificationResult": {
+        "success": true,
+        "timestamp": "2026-11-09T14:06:40.482Z"
       },
       "isIdempotent": false,
       "reconcileAttempts": 0
