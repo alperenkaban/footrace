@@ -98,10 +98,12 @@ export class GamesService {
       state.questions = selectedQuestions;
     } catch (err) {
       this.logger.error(`[startGameCountdown] Soru seçimi başarısız: ${(err as Error).message}`);
-      this.server.to(roomId).emit('error', {
-        code: 'NO_QUESTIONS',
-        message: 'Oyun başlatılamadı: Yeterli aktif soru bulunamadı.',
-      });
+      if (this.server) {
+        this.server.to(roomId).emit('error', {
+          code: 'NO_QUESTIONS',
+          message: 'Oyun başlatılamadı: Yeterli aktif soru bulunamadı.',
+        });
+      }
       return;
     }
 

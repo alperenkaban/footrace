@@ -2,12 +2,15 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.env.test
+backend/.env.test
 dist/
 build/
 .next/
 *.log
 .DS_Store
 test-*.ts
+!backend/src/**
 !backend/test-real-infra.ts
 !backend/test-e2e-mvp-audit.ts
 test-*.js

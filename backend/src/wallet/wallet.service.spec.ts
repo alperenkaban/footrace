@@ -174,4 +174,66 @@ describe('WalletService Unit Tests', () => {
       );
     });
   });
+
+  describe('spendCoins & debitCoins', () => {
+    it('should throw BadRequestException if amount <= 0', async () => {
+      await expect(service.spendCoins('u1', 0, 'ref-1')).rejects.toThrow(BadRequestException);
+      await expect(service.debitCoins('u1', -10, 'ref-2')).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException if user profile not found', async () => {
+      prismaMock.playerProfile.findUnique.mockResolvedValueOnce(null);
+      await expect(service.spendCoins('u1', 50, 'ref-spend-1')).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException if balance is insufficient', async () => {
+      prismaMock.playerProfile.findUnique.mockResolvedValueOnce({ balance: 30, heldBalance: 0 });
+      await expect(service.spendCoins('u1', 50, 'ref-spend-2')).rejects.toThrow('Bakiye yetersiz');
+    });
+
+    it('should deduct balance and create negative CoinTransaction', async () => {
+      prismaMock.playerProfile.findUnique.mockResolvedValueOnce({ balance: 200, heldBalance: 0 });
+      prismaMock.playerProfile.update.mockResolvedValueOnce({ balance: 150, heldBalance: 0 });
+
+      const res = await service.spendCoins('u1', 50, 'item_hat_1', 'ITEM_PURCHASE');
+      expect(res.balance).toBe(150);
+      expect(prismaMock.playerProfile.update).toHaveBeenCalledWith({
+        where: { userId: 'u1' },
+        data: { balance: 150 },
+      });
+      expect(prismaMock.coinTransaction.create).toHaveBeenCalledWith({
+        data: {
+          userId: 'u1',
+          amount: -50,
+          type: 'ITEM_PURCHASE',
+          referenceId: 'item_hat_1',
+          balanceBefore: 200,
+          balanceAfter: 150,
+        },
+      });
+    });
+
+    it('should skip double deduction if transaction already exists (idempotency)', async () => {
+      prismaMock.playerProfile.findUnique.mockResolvedValueOnce({ balance: 200, heldBalance: 0 });
+      prismaMock.coinTransaction.findUnique.mockResolvedValueOnce({ id: 'existing-tx' });
+
+      const res = await service.spendCoins('u1', 50, 'item_hat_1', 'ITEM_PURCHASE');
+      expect(res.balance).toBe(200);
+      expect(prismaMock.playerProfile.update).not.toHaveBeenCalled();
+      expect(prismaMock.coinTransaction.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getBalance', () => {
+    it('should throw BadRequestException if profile not found', async () => {
+      prismaMock.playerProfile.findUnique.mockResolvedValueOnce(null);
+      await expect(service.getBalance('u-missing')).rejects.toThrow(BadRequestException);
+    });
+
+    it('should return balance and heldBalance', async () => {
+      prismaMock.playerProfile.findUnique.mockResolvedValueOnce({ balance: 350, heldBalance: 100 });
+      const res = await service.getBalance('u1');
+      expect(res).toEqual({ balance: 350, heldBalance: 100 });
+    });
+  });
 });

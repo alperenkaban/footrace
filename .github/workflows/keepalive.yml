@@ -15,3 +15,4 @@ jobs:
           echo "Pinging Footrace backend health endpoint..."
           curl -s -S --max-time 120 "https://footrace-6lnc.onrender.com/health" || true
           echo "Keep-alive ping sent successfully."
+

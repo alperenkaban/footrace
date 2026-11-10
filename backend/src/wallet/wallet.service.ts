@@ -36,22 +36,57 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Aynı kullanıcı için eşzamanlı cüzdan işlemlerini sıraya dizer (Race condition koruması).
+   * Process içi kuyruk (local mutex) ve Redis dağıtık kilit (distributed lock) uygular.
+   * Redis bağlantısı kesildiğinde veya TTL süresi dolduğunda PostgreSQL FOR UPDATE row lock ile ACID güvencesi sağlar.
    */
   private async withUserLock<T>(userId: string, fn: () => Promise<T>): Promise<T> {
     while (this.userLocks.has(userId)) {
       await this.userLocks.get(userId);
     }
-    let release!: () => void;
+    let releaseLocal!: () => void;
     const lockPromise = new Promise<void>((resolve) => {
-      release = resolve;
+      releaseLocal = resolve;
     });
     this.userLocks.set(userId, lockPromise);
+
+    let redisLockKey: string | null = null;
+    let lockToken: string | null = null;
+    let redisLockAcquired = false;
+
+    if (this.redisService) {
+      redisLockKey = `wallet_user_lock:${userId}`;
+      lockToken = `${Date.now()}_${Math.random()}`;
+      const maxRetries = 40;
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          const acquired = await this.redisService.setNX(redisLockKey, lockToken, 5);
+          if (acquired) {
+            redisLockAcquired = true;
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 50));
+        } catch (redisErr) {
+          this.logger.debug(`Redis lock error for user ${userId}, falling back to DB lock: ${(redisErr as Error).message}`);
+          break;
+        }
+      }
+    }
 
     try {
       return await fn();
     } finally {
+      if (redisLockAcquired && redisLockKey && this.redisService) {
+        try {
+          const val = await this.redisService.get(redisLockKey);
+          if (val === lockToken) {
+            await this.redisService.del(redisLockKey);
+          }
+        } catch {
+          // Redis unlock hatası önemsizdir; TTL otomatik düşürür
+        }
+      }
       this.userLocks.delete(userId);
-      release();
+      releaseLocal();
     }
   }
 
@@ -62,17 +97,48 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
     while (this.matchLocks.has(matchId)) {
       await this.matchLocks.get(matchId);
     }
-    let release!: () => void;
+    let releaseLocal!: () => void;
     const lockPromise = new Promise<void>((resolve) => {
-      release = resolve;
+      releaseLocal = resolve;
     });
     this.matchLocks.set(matchId, lockPromise);
+
+    let redisLockKey: string | null = null;
+    let lockToken: string | null = null;
+    let redisLockAcquired = false;
+
+    if (this.redisService) {
+      redisLockKey = `wallet_match_lock:${matchId}`;
+      lockToken = `${Date.now()}_${Math.random()}`;
+      const maxRetries = 40;
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          const acquired = await this.redisService.setNX(redisLockKey, lockToken, 10);
+          if (acquired) {
+            redisLockAcquired = true;
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 50));
+        } catch (redisErr) {
+          this.logger.debug(`Redis match lock error for match ${matchId}, falling back to DB lock: ${(redisErr as Error).message}`);
+          break;
+        }
+      }
+    }
 
     try {
       return await fn();
     } finally {
+      if (redisLockAcquired && redisLockKey && this.redisService) {
+        try {
+          const val = await this.redisService.get(redisLockKey);
+          if (val === lockToken) {
+            await this.redisService.del(redisLockKey);
+          }
+        } catch {}
+      }
       this.matchLocks.delete(matchId);
-      release();
+      releaseLocal();
     }
   }
 
@@ -260,11 +326,12 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
             data: { status: 'REFUNDED', refundedAt: new Date() },
           });
 
+          const newHeld = Math.max(0, profile.heldBalance - amount);
           await tx.playerProfile.update({
             where: { userId },
             data: {
               balance: profile.balance + amount,
-              heldBalance: profile.heldBalance - amount,
+              heldBalance: newHeld,
             },
           });
         });
@@ -306,45 +373,52 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
             data: { status: 'REFUNDED', refundedAt: new Date() },
           });
 
-          const p = await tx.playerProfile.update({
+          const prof = await tx.playerProfile.findUnique({
             where: { userId: hold.userId },
-            data: {
-              balance: { increment: hold.amount },
-              heldBalance: { decrement: hold.amount },
-            },
+            select: { balance: true, heldBalance: true },
           });
-
-          // Ledger iade kaydı ekle (@@unique([userId, type, referenceId]) ile korunur)
-          let existingRefundTx = null;
-          if (typeof tx.coinTransaction?.findUnique === 'function') {
-            existingRefundTx = await tx.coinTransaction.findUnique({
-              where: {
-                userId_type_referenceId: {
-                  userId: hold.userId,
-                  type: 'MATCH_REFUND',
-                  referenceId: matchId,
-                },
+          if (prof) {
+            const newHeld = Math.max(0, prof.heldBalance - hold.amount);
+            const p = await tx.playerProfile.update({
+              where: { userId: hold.userId },
+              data: {
+                balance: { increment: hold.amount },
+                heldBalance: newHeld,
               },
             });
-          }
 
-          if (!existingRefundTx) {
-            try {
-              await tx.coinTransaction.create({
-                data: {
-                  userId: hold.userId,
-                  amount: hold.amount,
-                  type: 'MATCH_REFUND',
-                  referenceId: matchId,
-                  balanceBefore: p.balance - hold.amount,
-                  balanceAfter: p.balance,
-                },
-              });
-            } catch (txErr) {
-              this.logger.warn(`CoinTransaction duplicate in refundMatchHolds: ${(txErr as Error).message}`);
+              // Ledger iade kaydı ekle (@@unique([userId, type, referenceId]) ile korunur)
+              let existingRefundTx = null;
+              if (typeof tx.coinTransaction?.findUnique === 'function') {
+                existingRefundTx = await tx.coinTransaction.findUnique({
+                  where: {
+                    userId_type_referenceId: {
+                      userId: hold.userId,
+                      type: 'MATCH_REFUND',
+                      referenceId: matchId,
+                    },
+                  },
+                });
+              }
+
+              if (!existingRefundTx) {
+                try {
+                  await tx.coinTransaction.create({
+                    data: {
+                      userId: hold.userId,
+                      amount: hold.amount,
+                      type: 'MATCH_REFUND',
+                      referenceId: matchId,
+                      balanceBefore: p.balance - hold.amount,
+                      balanceAfter: p.balance,
+                    },
+                  });
+                } catch (txErr) {
+                  this.logger.warn(`CoinTransaction duplicate in refundMatchHolds: ${(txErr as Error).message}`);
+                }
+              }
+              refundedCount++;
             }
-          }
-          refundedCount++;
         }
 
         this.logger.log(`Refunded ${refundedCount} holds for match ${matchId}`);
@@ -406,11 +480,12 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
             },
           });
 
+          const newHeld = Math.max(0, profile.heldBalance - freshHold.amount);
           const updatedProfile = await tx.playerProfile.update({
             where: { userId: freshHold.userId },
             data: {
               balance: { increment: freshHold.amount },
-              heldBalance: { decrement: freshHold.amount },
+              heldBalance: newHeld,
             },
           });
 
@@ -511,11 +586,12 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
             });
           }
 
+          const newHeld = Math.max(0, profile.heldBalance - amount);
           await tx.playerProfile.update({
             where: { userId },
             data: {
               balance: profile.balance + amount,
-              heldBalance: profile.heldBalance - amount,
+              heldBalance: newHeld,
             },
           });
 
@@ -614,30 +690,44 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
               where: { matchId, status: 'HELD' },
             });
             for (const h of remainingHolds) {
+              if (typeof (tx as any).$queryRaw === 'function') {
+                try {
+                  await (tx as any).$queryRaw`SELECT balance, "heldBalance" FROM "PlayerProfile" WHERE "userId" = ${h.userId} FOR UPDATE`;
+                } catch {}
+              }
+
               await tx.matchHold.update({
                 where: { id: h.id },
                 data: { status: 'REFUNDED', refundedAt: new Date() },
               });
-              const p = await tx.playerProfile.update({
+
+              const prof = await tx.playerProfile.findUnique({
                 where: { userId: h.userId },
-                data: {
-                  balance: { increment: h.amount },
-                  heldBalance: { decrement: h.amount },
-                },
+                select: { balance: true, heldBalance: true },
               });
-              try {
-                await tx.coinTransaction.create({
+              if (prof) {
+                const newHeld = Math.max(0, prof.heldBalance - h.amount);
+                const p = await tx.playerProfile.update({
+                  where: { userId: h.userId },
                   data: {
-                    userId: h.userId,
-                    amount: h.amount,
-                    type: 'MATCH_REFUND',
-                    referenceId: matchId,
-                    balanceBefore: p.balance - h.amount,
-                    balanceAfter: p.balance,
+                    balance: { increment: h.amount },
+                    heldBalance: newHeld,
                   },
                 });
-              } catch (txErr) {
-                this.logger.warn(`CoinTransaction duplicate in practice settlement: ${(txErr as Error).message}`);
+                try {
+                  await tx.coinTransaction.create({
+                    data: {
+                      userId: h.userId,
+                      amount: h.amount,
+                      type: 'MATCH_REFUND',
+                      referenceId: matchId,
+                      balanceBefore: p.balance - h.amount,
+                      balanceAfter: p.balance,
+                    },
+                  });
+                } catch (txErr) {
+                  this.logger.warn(`CoinTransaction duplicate in practice settlement: ${(txErr as Error).message}`);
+                }
               }
             }
 
@@ -658,35 +748,56 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
           const prizePool = totalPot - houseFee;
 
           // 1. Tüm gerçek oyuncuların hold kayıtlarını SETTLED yap ve heldBalance'ı düşür
-          const matchHolds = await tx.matchHold.findMany({
-            where: { matchId, status: 'HELD' },
-          });
+          if (typeof (tx as any).$queryRaw === 'function') {
+            try {
+              await (tx as any).$queryRaw`SELECT id, status, amount, "userId" FROM "MatchHold" WHERE "matchId" = ${matchId} FOR UPDATE`;
+            } catch {}
+          }
 
-          const heldUserIds = new Set<string>();
-          for (const h of matchHolds) {
-            heldUserIds.add(h.userId);
+          const allMatchHolds = await tx.matchHold.findMany({
+            where: { matchId },
+          });
+          const playersWithExplicitHold = new Set(allMatchHolds.map((h) => h.userId));
+          const activeHolds = allMatchHolds.filter((h) => h.status === 'HELD');
+
+          for (const h of activeHolds) {
             if (typeof (tx as any).$queryRaw === 'function') {
               try {
                 await (tx as any).$queryRaw`SELECT balance, "heldBalance" FROM "PlayerProfile" WHERE "userId" = ${h.userId} FOR UPDATE`;
               } catch {}
             }
+
             await tx.matchHold.update({
               where: { id: h.id },
               data: { status: 'SETTLED', settledAt: new Date() },
             });
-            await tx.playerProfile.update({
+
+            const p = await tx.playerProfile.findUnique({
               where: { userId: h.userId },
-              data: { heldBalance: { decrement: h.amount } },
+              select: { heldBalance: true },
             });
+            if (p) {
+              const newHeld = Math.max(0, p.heldBalance - h.amount);
+              await tx.playerProfile.update({
+                where: { userId: h.userId },
+                data: { heldBalance: newHeld },
+              });
+            }
           }
 
-          // MatchHold kaydı bulunamayan oyuncular için geriye uyumlu düşüm
+          // MatchHold kaydı bulunamayan oyuncular için geriye uyumlu düşüm (Yalnızca explicit hold kaydı olmayanlar)
           for (const pid of allPlayerIds) {
-            if (!heldUserIds.has(pid)) {
-              await tx.playerProfile.update({
+            if (!playersWithExplicitHold.has(pid)) {
+              const p = await tx.playerProfile.findUnique({
                 where: { userId: pid },
-                data: { heldBalance: { decrement: entryFee } },
+                select: { heldBalance: true },
               });
+              if (p && p.heldBalance >= entryFee && entryFee > 0) {
+                await tx.playerProfile.update({
+                  where: { userId: pid },
+                  data: { heldBalance: Math.max(0, p.heldBalance - entryFee) },
+                });
+              }
             }
           }
 
@@ -748,6 +859,110 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
         this.logger.error(`Error settling match ${matchId}: ${(e as Error).message}`);
         throw new InternalServerErrorException('Match settlement failed');
       }
+    });
+  }
+
+  /**
+   * Bir maçı erken sonlandırır (iptal/abort) ve tüm aktif hold kayıtlarını iade eder.
+   * Sunucu hatalarında, soru yükleme kesintilerinde veya erken iptallerde kullanılır.
+   */
+  async abortMatch(matchId: string, reason?: string): Promise<{ aborted: boolean; refundedCount: number }> {
+    return this.withMatchLock(matchId, async () => {
+      return await this.prisma.$transaction(async (tx) => {
+        let match: any = null;
+        try {
+          const lockedMatches = await tx.$queryRawUnsafe<any[]>(
+            `SELECT status, "settledAt" FROM "Match" WHERE id = $1 FOR UPDATE`,
+            matchId,
+          );
+          if (lockedMatches && lockedMatches.length > 0) {
+            match = lockedMatches[0];
+          }
+        } catch {}
+
+        if (!match) {
+          match = await tx.match.findUnique({
+            where: { id: matchId },
+            select: { status: true, settledAt: true },
+          });
+        }
+
+        if (!match || match.settledAt || match.status === 'SETTLED' || match.status === 'ABORTED') {
+          return { aborted: false, refundedCount: 0 };
+        }
+
+        await tx.match.update({
+          where: { id: matchId },
+          data: {
+            status: 'ABORTED',
+            settledAt: new Date(),
+          },
+        });
+
+        const activeHolds = await tx.matchHold.findMany({
+          where: { matchId, status: 'HELD' },
+        });
+
+        let refundedCount = 0;
+        for (const hold of activeHolds) {
+          const user = await tx.user.findUnique({
+            where: { id: hold.userId },
+            select: { isBot: true },
+          });
+          if (user?.isBot) continue;
+
+          await tx.matchHold.update({
+            where: { id: hold.id },
+            data: { status: 'REFUNDED', refundedAt: new Date() },
+          });
+
+          const prof = await tx.playerProfile.findUnique({
+            where: { userId: hold.userId },
+            select: { balance: true, heldBalance: true },
+          });
+          if (prof) {
+            const newHeld = Math.max(0, prof.heldBalance - hold.amount);
+            const p = await tx.playerProfile.update({
+              where: { userId: hold.userId },
+              data: {
+                balance: { increment: hold.amount },
+                heldBalance: newHeld,
+              },
+            });
+
+              let existingRefundTx = null;
+              if (typeof tx.coinTransaction?.findUnique === 'function') {
+                existingRefundTx = await tx.coinTransaction.findUnique({
+                  where: {
+                    userId_type_referenceId: {
+                      userId: hold.userId,
+                      type: 'MATCH_REFUND',
+                      referenceId: matchId,
+                    },
+                  },
+                });
+              }
+              if (!existingRefundTx) {
+                try {
+                  await tx.coinTransaction.create({
+                    data: {
+                      userId: hold.userId,
+                      amount: hold.amount,
+                      type: 'MATCH_REFUND',
+                      referenceId: matchId,
+                      balanceBefore: p.balance - hold.amount,
+                      balanceAfter: p.balance,
+                    },
+                  });
+                } catch {}
+              }
+              refundedCount++;
+            }
+        }
+
+        this.logger.log(`Match ${matchId} aborted (${reason || 'N/A'}). Refunded ${refundedCount} holds.`);
+        return { aborted: true, refundedCount };
+      });
     });
   }
 
@@ -882,42 +1097,49 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
                 data: { status: 'REFUNDED', refundedAt: new Date() },
               });
 
-              const p = await tx.playerProfile.update({
+              const prof = await tx.playerProfile.findUnique({
                 where: { userId: hold.userId },
-                data: {
-                  balance: { increment: hold.amount },
-                  heldBalance: { decrement: hold.amount },
-                },
+                select: { balance: true, heldBalance: true },
               });
-
-              // Atomik audit ledger kaydı oluştur (Ön kontrol ile 25P02 abort engellenir)
-              let existingRefundTx = null;
-              if (typeof tx.coinTransaction?.findUnique === 'function') {
-                existingRefundTx = await tx.coinTransaction.findUnique({
-                  where: {
-                    userId_type_referenceId: {
-                      userId: hold.userId,
-                      type: 'MATCH_REFUND',
-                      referenceId: match.id,
-                    },
-                  },
-                });
-              }
-              if (!existingRefundTx) {
-                await tx.coinTransaction.create({
+              if (prof) {
+                const newHeld = Math.max(0, prof.heldBalance - hold.amount);
+                const p = await tx.playerProfile.update({
+                  where: { userId: hold.userId },
                   data: {
-                    userId: hold.userId,
-                    amount: hold.amount,
-                    type: 'MATCH_REFUND',
-                    referenceId: match.id,
-                    balanceBefore: p.balance - hold.amount,
-                    balanceAfter: p.balance,
+                    balance: { increment: hold.amount },
+                    heldBalance: newHeld,
                   },
                 });
-              }
 
-              refundedUserIds.add(hold.userId);
-              refundedCount++;
+                  // Atomik audit ledger kaydı oluştur (Ön kontrol ile 25P02 abort engellenir)
+                  let existingRefundTx = null;
+                  if (typeof tx.coinTransaction?.findUnique === 'function') {
+                    existingRefundTx = await tx.coinTransaction.findUnique({
+                      where: {
+                        userId_type_referenceId: {
+                          userId: hold.userId,
+                          type: 'MATCH_REFUND',
+                          referenceId: match.id,
+                        },
+                      },
+                    });
+                  }
+                  if (!existingRefundTx) {
+                    await tx.coinTransaction.create({
+                      data: {
+                        userId: hold.userId,
+                        amount: hold.amount,
+                        type: 'MATCH_REFUND',
+                        referenceId: match.id,
+                        balanceBefore: p.balance - hold.amount,
+                        balanceAfter: p.balance,
+                      },
+                    });
+                  }
+
+                  refundedUserIds.add(hold.userId);
+                  refundedCount++;
+                }
             }
 
             // MatchHold kaydı olmayan eski maçlar için geriye uyumlu iade
@@ -976,6 +1198,31 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
       } catch (err) {
         this.logger.error(`Failed to reconcile match ${match.id}: ${(err as Error).message}`);
       }
+    }
+
+    // 3. Yetim (Maça bağlanmamış ve kuyrukta kalmış) hold kayıtlarını kurtar
+    try {
+      const orphanHolds = await this.prisma.matchHold.findMany({
+        where: {
+          matchId: null,
+          status: 'HELD',
+          createdAt: { lt: cutoff },
+        },
+      });
+
+      for (const hold of orphanHolds) {
+        try {
+          const refunded = await this.refundHoldRecord(hold.id);
+          if (refunded) {
+            refundedCount++;
+            this.logger.log(`[Reconciliation] Refunded orphan hold ${hold.id} for user ${hold.userId}`);
+          }
+        } catch (orphanErr) {
+          this.logger.warn(`Failed to reconcile orphan hold ${hold.id}: ${(orphanErr as Error).message}`);
+        }
+      }
+    } catch (orphanScanErr) {
+      this.logger.warn(`Failed scanning orphan holds: ${(orphanScanErr as Error).message}`);
     }
 
     this.logger.log(`[Reconciliation] Finished. Aborted: ${abortedCount}, Refunded: ${refundedCount}`);
@@ -1052,5 +1299,109 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
         return { balance: updated.balance, heldBalance: updated.heldBalance };
       });
     });
+  }
+
+  /**
+   * Kullanıcı bakiyesinden harcama yapar (Kozmetik, ipucu, paket vb.).
+   * Yetersiz bakiyede BadRequestException fırlatır, bakiye asla negatife düşemez.
+   * Idempotency: Aynı referenceId ve type ile mükerrer çağrılarda çift harcama yapmaz.
+   */
+  async spendCoins(
+    userId: string,
+    amount: number,
+    referenceId: string,
+    type: string = 'COIN_SPEND',
+  ): Promise<{ balance: number; heldBalance: number }> {
+    if (amount <= 0) {
+      throw new BadRequestException('Harcama miktarı 0 dan büyük olmalıdır');
+    }
+
+    return this.withUserLock(userId, async () => {
+      return await this.prisma.$transaction(async (tx) => {
+        if (typeof (tx as any).$queryRaw === 'function') {
+          try {
+            await (tx as any).$queryRaw`SELECT balance, "heldBalance" FROM "PlayerProfile" WHERE "userId" = ${userId} FOR UPDATE`;
+          } catch {}
+        }
+
+        const profile = await tx.playerProfile.findUnique({
+          where: { userId },
+          select: { balance: true, heldBalance: true },
+        });
+
+        if (!profile) {
+          throw new BadRequestException('Kullanıcı profili bulunamadı');
+        }
+
+        let existingTx = null;
+        if (typeof tx.coinTransaction?.findUnique === 'function') {
+          existingTx = await tx.coinTransaction.findUnique({
+            where: {
+              userId_type_referenceId: {
+                userId,
+                type,
+                referenceId,
+              },
+            },
+          });
+        }
+
+        if (existingTx) {
+          this.logger.warn(`SpendCoins duplicate skipped for user ${userId}, ref: ${referenceId}`);
+          return { balance: profile.balance, heldBalance: profile.heldBalance };
+        }
+
+        if (profile.balance < amount) {
+          throw new BadRequestException('Bakiye yetersiz');
+        }
+
+        const updated = await tx.playerProfile.update({
+          where: { userId },
+          data: {
+            balance: profile.balance - amount,
+          },
+        });
+
+        await tx.coinTransaction.create({
+          data: {
+            userId,
+            amount: -amount,
+            type,
+            referenceId,
+            balanceBefore: profile.balance,
+            balanceAfter: updated.balance,
+          },
+        });
+
+        this.logger.log(`Spent ${amount} coins for user ${userId} (Ref: ${referenceId}, Type: ${type}, New Balance: ${updated.balance})`);
+        return { balance: updated.balance, heldBalance: updated.heldBalance };
+      });
+    });
+  }
+
+  /**
+   * Alias for spendCoins.
+   */
+  async debitCoins(
+    userId: string,
+    amount: number,
+    referenceId: string,
+    type: string = 'COIN_SPEND',
+  ): Promise<{ balance: number; heldBalance: number }> {
+    return this.spendCoins(userId, amount, referenceId, type);
+  }
+
+  /**
+   * Kullanıcının anlık bakiye ve bloke bakiye durumunu getirir.
+   */
+  async getBalance(userId: string): Promise<{ balance: number; heldBalance: number }> {
+    const profile = await this.prisma.playerProfile.findUnique({
+      where: { userId },
+      select: { balance: true, heldBalance: true },
+    });
+    if (!profile) {
+      throw new BadRequestException('Kullanıcı profili bulunamadı');
+    }
+    return { balance: profile.balance, heldBalance: profile.heldBalance };
   }
 }

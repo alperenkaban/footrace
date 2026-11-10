@@ -122,8 +122,7 @@
      - Önceden yalnızca 3 tipi render eden arayüz; `PLAYER_GUESS` (ipucu kartları, oyuncu arama ve seçenekler), `HARD_QUESTION` (alevli zor soru rozeti, +1500 puan) ve `FINAL` (kraliyet tacı final rozeti, +2000 puan) soru tiplerini destekleyecek şekilde güncellendi.
   7. **Kapsamlı Test Paketi:**
      - `test/ten-round-engine.spec.ts` oluşturularak 10 turluk sıralama, sunucu otoritesi, 5 soru tipinin puanlama matematiği, veri bütünlüğü ve 10 oyunculu maç simülasyonu test edildi (21 test dosyası, 230 test %100 yeşil).
-- **⏭️ Sonraki Adım:** Onay beklemeden kesintisiz olarak sonraki faza geçilecektir.
-
+- **⏭️ Sonraki Adım:** Onay beklemeden kesintisiz olarak **[Faz 5] Skor, Kazanan ve Ödül Dağıtımı Denetimi** başlatıldı.
 
 ---
 
@@ -187,3 +186,108 @@
      - Toplam 23 test dosyası, 249 test %100 yeşil ve `nest build` hatasız tamamlandı.
 - **⏭️ Sonraki Adım:** Onay beklemeden kesintisiz olarak sonraki faza geçilecektir.
 
+---
+
+### 💬 [Faz 0] Mevcut Sistemin Gerçek Durumunu İncele (3. Doğrulama Kuyruğu)
+
+- **Durum:** ✅ Tamamlandı (03:13:00)
+- **Hedef:** Önceki iki kuyruğun çıktısını, mevcut kodu ve test altyapısını doğrulayarak güvenli bir başlangıç noktası oluşturmak.
+- **Doğrulama Sonucu:** Başarılı ✔ (`npm --prefix backend test` - 23 dosya, 249 test %100 geçti; `npm --prefix backend run build` 0 hata; `npm --prefix frontend run build` 0 hata, 7 rota derlendi)
+- **💡 Nova Denetim Bulguları ve Rapor Özeti:**
+  1. **Doğrulanan Metrikler:** 23 test dosyası ve 249 backend testi %100 geçti; NestJS + Prisma ve Next.js Turbopack derlemeleri sıfır hata ile tamamlandı.
+  2. **Prisma ve Veritabanı:** 11 model, 1 enum ve 2 migration (`20261011000000_init`, `20261012_p0_match_hold_and_ledger`) tam senkronize.
+  3. **Çelişki ve Açık Tespiti (Gaps):**
+     - Mevcut 249 testin tamamı unit seviyesinde mock Prisma ve mock Redis ile koşmaktadır; canlı PostgreSQL ve gerçek Redis soketine bağlı entegrasyon testleri henüz mevcut değildir.
+     - `frontend` projesinde hiçbir test kütüphanesi (Vitest, Jest, Playwright) veya test dosyası yer almamaktadır (0 test).
+     - Sistemde halihazırda 6379 portunda başka bir konteyner çalışmakta olup, test ortamı için izole servis ayrımı gereklidir.
+     - Socket.IO soket ve oturumları tek process hafızasındadır (`userSockets`, `clientMapping`); Redis Adapter henüz kurulu değildir.
+  4. **Yol Haritası:** Faz 1'den Faz 34'e kadar tüm fazların gerçek dosya yolları `docs/FAZ_0_SISTEM_DURUMU_VE_DOGRULAMA_RAPORU.md` içerisinde eksiksiz haritalandırılmıştır.
+- **⏭️ Sonraki Adım:** Onay beklemeden kesintisiz olarak **[Faz 1] İzole PostgreSQL ve Redis Entegrasyon Ortamı** başlatılacaktır.
+
+
+---
+
+### 💬 [Faz 0] Mevcut Sistemin Gerçek Durumunu İncele
+
+- **Durum:** ✅ Tamamlandı (03:14:50)
+- **Hedef:** Önceki iki kuyruğun çıktısını, mevcut kodu ve test altyapısını doğrulayarak güvenli bir başlangıç noktası oluştur.
+- **Doğrulama Sonucu:** Başarılı ✔
+- **💡 Nova Özeti:** Önceki iki kuyruğun çıktısını, mevcut kodu ve test altyapısını doğrulayarak güvenli bir başlangıç noktası oluştur.
+- **⏭️ Sonraki Adım:** Onay beklemeden kesintisiz olarak **[Faz 1] İzole PostgreSQL ve Redis Entegrasyon Ortamı** başlatıldı.
+
+---
+
+### 💬 [Faz 1] İzole PostgreSQL ve Redis Entegrasyon Ortamı
+
+- **Durum:** ✅ Tamamlandı (03:22:00)
+- **Hedef:** Gerçek PostgreSQL ve Redis servisleriyle güvenli test ortamı oluşturmak.
+- **Doğrulama Sonucu:** Başarılı ✔ (`npm --prefix backend run test:integration` 19/19 test geçti; `npm --prefix backend test` 24 dosya, 268 test %100 geçti; `npm --prefix backend run build` 0 hata)
+- **💡 Nova Denetim Bulguları ve Uygulanan Çözümler:**
+  1. **İzole Docker Servisleri Kuruldu (`docker-compose.test.yml`):**
+     - Geliştirme veritabanı `footquiz` (port 5433) ve hosttaki diğer projelerin Redis'i (port 6379) ile çakışmayı önlemek için; izole `footquiz-test-postgres` (Port 5434 / DB: `footquiz_test`) ve `footquiz-test-redis` (Port 6380) yapılandırıldı ve ayağa kaldırıldı.
+  2. **Güvenlik ve İzolasyon Kalkanı (`backend/src/config/test-db-guard.ts`):**
+     - Testlerin yanlışlıkla geliştirme (`footquiz`) veya production veritabanına bağlanmasını engelleyen `TestDbGuard` geliştirildi. Yalnızca `_test` uzantılı veritabanlarına izin verilir; aksi halde fatal hata fırlatılarak veri kirliliği/silinmesi %100 engellenir.
+  3. **Çevre ve Orkestrasyon Betikleri:**
+     - `backend/.env.test`, `backend/.env.test.example`, `scripts/test-infra-setup.ps1` ve `scripts/test-infra-setup.sh` oluşturuldu. `backend/package.json` içerisine `test:infra:up`, `test:infra:down`, `test:infra:setup`, `test:integration` eklendi.
+  4. **Prisma Migration Durumu:**
+     - `footquiz_test` veritabanına `npx prisma migrate deploy` başarıyla uygulandı (`20261011000000_init`, `20261012_p0_match_hold_and_ledger`). `prisma migrate status` çıktısıyla şemanın güncel olduğu ve 12 tablonun eksiksiz oluşturulduğu doğrulandı.
+  5. **Gerçek Servislerle Kapsamlı Entegrasyon Testleri (`backend/test/isolated-infra.spec.ts`):**
+     - **Safety Guard:** Geliştirme DB (`footquiz`), prod DB ve 6379 portunun test için reddedildiği, `footquiz_test` ve 6380 portunun onaylandığı kanıtlandı.
+     - **PostgreSQL Bağlantı & Tablolar:** Gerçek DB bağlantısı, 12 tablonun varlığı ve migration kayıtları doğrulandı. Port 5433'teki 71 kullanıcılı dev veritabanına kesinlikle dokunulmadığı kanıtlandı.
+     - **Transaction & Rollback:** Başarılı transaction'ın commit edildiği; fırlatılan hata durumunda transaction'ın tamamen rollback edilerek yetim kayıt bırakmadığı ve FK kısıtlarının çalıştığı kanıtlandı.
+     - **Redis Bağlantı & PING:** Gerçek Redis bağlantısı, `ping()` -> `PONG`, veri okuma/yazma, TTL ve silme doğrulandı.
+     - **Redis Dağıtık Kilit (SETNX Mutex):** Eşzamanlı ilk kilidin alındığı, ikinci çağrının reddedildiği, kilit bırakıldığında veya TTL dolduğunda yeni kilidin alınabildiği ve farklı kilit anahtarlarının bağımsız çalıştığı kanıtlandı.
+     - **Offline Servis Raporlama:** Kapalı portlara (5439, 6389) bağlanıldığında crash olmadan temiz rapor üretildiği ve prod verisine dokunulmadığı kanıtlandı.
+- **⏭️ Sonraki Adım:** Onay beklemeden kesintisiz olarak **[Faz 2] Wallet ve CoinTransaction Eşzamanlılık Denetimi** başlatılacaktır.
+
+
+---
+
+### 💬 [Faz 1] İzole PostgreSQL ve Redis Entegrasyon Ortamı
+
+- **Durum:** ✅ Tamamlandı (03:23:22)
+- **Hedef:** Gerçek PostgreSQL ve Redis servisleriyle güvenli test ortamı oluşturmak.
+- **Doğrulama Sonucu:** Başarılı ✔
+- **💡 Nova Özeti:** Gerçek PostgreSQL ve Redis servisleriyle güvenli test ortamı oluşturmak.
+- **⏭️ Sonraki Adım:** Onay beklemeden kesintisiz olarak **[Faz 2] Wallet ve CoinTransaction Eşzamanlılık Denetimi** başlatıldı.
+
+---
+
+### 💬 [Faz 2] Wallet ve CoinTransaction Eşzamanlılık Denetimi
+
+- **Durum:** ✅ Tamamlandı (03:34:00)
+- **Hedef:** Eşzamanlı coin işlemlerinde bakiye ve ledger tutarlılığını doğrulamak.
+- **Doğrulama Sonucu:** Başarılı ✔ (`npm --prefix backend test && npm --prefix backend run build` - 25 test dosyası, 285 test geçti, 0 hata)
+- **💡 Nova Denetim Bulguları ve Uygulanan Çözümler:**
+  1. **`spendCoins` ve `debitCoins` Harcama Mekanizması Eklendi:**
+     - `WalletService` içine kullanıcı bakiyesinden harcama yapan (`spendCoins` / `debitCoins`) ve `CoinTransaction` tablosuna negatif tutarlı kayıt yazan atomik metot kazandırıldı.
+     - `[userId, type, referenceId]` unique bileşik anahtarı ile idempotency garanti altına alındı. Yetersiz bakiyede `BadRequestException('Bakiye yetersiz')` fırlatılarak bakiye asla eksiye düşürülmez.
+  2. **Dağıtık Redis Kilit (Distributed Mutex) ve PostgreSQL ACID Fallback:**
+     - `withUserLock` ve `withMatchLock` yapıları `RedisService.setNX` ile dağıtık kilit alacak şekilde geliştirildi (`wallet_user_lock:${userId}`, `wallet_match_lock:${matchId}`).
+     - Kilit yalnızca token eşleştiğinde güvenle silinir.
+     - Redis kesintisinde (`ECONNREFUSED`), bağlantı koptuğunda veya kilit TTL süresi dolduğunda servis çökmeden güvenle PostgreSQL `SELECT ... FOR UPDATE` satır kilidine düşer (graceful degradation).
+  3. **`getBalance` Yardımcı Fonksiyonu:**
+     - Anlık `balance` ve `heldBalance` değerlerini tip güvenli döndüren `getBalance` metodu eklendi.
+  4. **Gerçek Servislerle Kapsamlı Eşzamanlılık Test Paketi (`backend/test/wallet-concurrency-audit.spec.ts`):**
+     - **Mixed Concurrency Race:** Aynı kullanıcı için paralel 10 Hold, 10 Spend, 10 Credit işleminde bakiye ve heldBalance asla eksiye düşmedi, sistem fon denklemi kuruşu kuruşuna sağlandı.
+     - **Double Spending:** 100 coin bakiyesi olan kullanıcı için aynı anda gelen 10 adet 100 coinlik harcama isteğinden tam 1 tanesi başarılı oldu, 9 tanesi yetersiz bakiye ile reddedildi, bakiye tam 0 kaldı.
+     - **Double Hold:** 100 coin bakiyesi için paralel 10 adet hold isteğinden tam 1 tanesi başarılı oldu, bakiye 0, heldBalance 100 kaldı.
+     - **Double Reward / Idempotency:** Aynı `referenceId` ile paralel 10 `creditCoins` çağrısında ödül yalnızca 1 kez yüklendi, mükerrer transaction oluşmadı.
+     - **Multi-Instance SettleMatch:** İki ayrı instance üzerinden paralel 4 `settleMatch` çağrısında ödül yalnızca 1 kez dağıtıldı, tek `MATCH_REWARD` oluştu.
+     - **Kayıp Transaction ve Ledger Audit:** 20 paralel kredi ve 10 paralel harcamada tam 30 transaction eksiksiz yazıldı, `balanceBefore + amount === balanceAfter` eşitliği korundu, son bakiye ile ledger tam mutabık kaldı.
+     - **Bakiye & Bloke Bütünlüğü:** Hold, refund, settle ve release adımlarında `balance` ve `heldBalance` her adımda matematiksel olarak doğrulandı.
+     - **Redis Outage Resilience:** Redis tamamen kapalıyken PostgreSQL row lock ile çift harcama engellendi.
+     - **Redis Lock TTL Expiry:** Redis lock süresi dolsa dahi PostgreSQL `FOR UPDATE` satır kilidi yarış durumunu %100 önledi.
+     - **Multi-Instance Pod Race:** Instance A ve Instance B üzerinden karışık 6 x 100 coin harcamada tam 3 başarılı, 3 ret ile yarış durumu oluşmadı.
+- **⏭️ Sonraki Adım:** Onay beklemeden kesintisiz olarak sonraki faza geçilecektir.
+
+
+---
+
+### 💬 [Faz 2] Wallet ve CoinTransaction Eşzamanlılık Denetimi
+
+- **Durum:** ✅ Tamamlandı (03:36:28)
+- **Hedef:** Eşzamanlı coin işlemlerinde bakiye ve ledger tutarlılığını doğrulamak.
+- **Doğrulama Sonucu:** Başarılı ✔
+- **💡 Nova Özeti:** Eşzamanlı coin işlemlerinde bakiye ve ledger tutarlılığını doğrulamak.
+- **⏭️ Sonraki Adım:** Onay beklemeden kesintisiz olarak **[Faz 3] MatchHold Yaşam Döngüsü Denetimi** başlatıldı.

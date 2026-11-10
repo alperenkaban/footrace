@@ -273,6 +273,14 @@ export class MatchmakingService implements OnModuleInit, OnModuleDestroy {
         if (cur === roomId) {
           await this.redisService.del(`player_room:${p}`);
         }
+        const hId = await this.redisService.get(`player_hold:${p}`);
+        if (hId) {
+          await this.redisService.del(`player_hold:${p}`);
+          await this.walletService.refundHoldRecord(hId).catch(() => {});
+        }
+      }
+      if (typeof (this.walletService as any).abortMatch === 'function') {
+        await (this.walletService as any).abortMatch(roomId, 'ROOM_INIT_FAILED').catch(() => {});
       }
       throw initErr;
     }
