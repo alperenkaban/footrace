@@ -18,5 +18,6 @@ test-*.js
 !**/migrations/**/*.sql
 *.tsbuildinfo
 .vscode/
+.local_pg/
 .agents/
 .phases.json.bak

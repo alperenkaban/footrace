@@ -60,6 +60,41 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     return client.handshake?.address || (client as any).conn?.remoteAddress || '127.0.0.1';
   }
 
+  /**
+   * Sokete bağlı kullanıcı kimliğini döner; soket henüz mapping'e işlenmemişse
+   * handshake verisindeki token'ı anında doğrulayarak yarış durumlarını (race condition) önler.
+   */
+  private getUserId(client: Socket): string | null {
+    const cached = this.clientMapping.get(client.id);
+    if (cached) return cached;
+
+    const authHeader = client.handshake?.headers?.authorization;
+    const token =
+      client.handshake?.auth?.token ||
+      (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
+        ? authHeader.slice(7)
+        : undefined) ||
+      (typeof client.handshake?.query?.token === 'string' ? client.handshake.query.token : undefined);
+
+    if (token && typeof token === 'string' && token.length <= 2048) {
+      try {
+        const payload = this.jwtService.verify(token);
+        const userId = payload?.sub;
+        if (userId && typeof userId === 'string' && userId.trim()) {
+          this.clientMapping.set(client.id, userId);
+          if (!this.userSockets.has(userId)) {
+            this.userSockets.set(userId, new Set());
+          }
+          this.userSockets.get(userId)!.add(client.id);
+          return userId;
+        }
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+
   async handleConnection(client: Socket) {
     try {
       // 1. IP bazlı bağlantı sıklık (rate limit) denetimi
@@ -210,7 +245,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      const userId = this.clientMapping.get(client.id);
+      const userId = this.getUserId(client);
       if (!userId) {
         client.emit('error', { code: 'UNAUTHORIZED', message: 'Socket is not authenticated.' });
         return;
@@ -254,7 +289,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      const userId = this.clientMapping.get(client.id);
+      const userId = this.getUserId(client);
       if (!userId) {
         client.emit('error', { code: 'UNAUTHORIZED', message: 'Socket is not authenticated.' });
         return;
@@ -356,7 +391,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      const userId = this.clientMapping.get(client.id);
+      const userId = this.getUserId(client);
       if (!userId) {
         client.emit('error', { code: 'UNAUTHORIZED', message: 'Socket is not authenticated.' });
         return;
@@ -386,7 +421,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      const userId = this.clientMapping.get(client.id);
+      const userId = this.getUserId(client);
       if (!userId) {
         client.emit('error', { code: 'UNAUTHORIZED', message: 'Socket is not authenticated.' });
         return;
@@ -416,7 +451,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      const userId = this.clientMapping.get(client.id);
+      const userId = this.getUserId(client);
       if (!userId) {
         client.emit('error', { code: 'UNAUTHORIZED', message: 'Socket is not authenticated.' });
         return;
@@ -480,7 +515,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      const userId = this.clientMapping.get(client.id);
+      const userId = this.getUserId(client);
       if (!userId) {
         client.emit('error', { code: 'UNAUTHORIZED', message: 'Socket is not authenticated.' });
         return;
@@ -520,7 +555,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   @SubscribeMessage('get_active_match')
   async handleGetActiveMatch(@ConnectedSocket() client: Socket) {
     try {
-      const userId = this.clientMapping.get(client.id);
+      const userId = this.getUserId(client);
       if (!userId) {
         client.emit('error', { code: 'UNAUTHORIZED', message: 'Socket is not authenticated.' });
         return;
@@ -562,7 +597,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      const userId = this.clientMapping.get(client.id);
+      const userId = this.getUserId(client);
       if (!userId) {
         client.emit('error', { code: 'UNAUTHORIZED', message: 'Socket is not authenticated.' });
         return;
